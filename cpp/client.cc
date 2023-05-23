@@ -8,49 +8,49 @@
 
 #include "csp/CSPRequest.hh"
 #include "csp/IPV4Socket.hh"
-//#include "cspservlet/UtilityStructs.hh"
+// #include "cspservlet/UtilityStructs.hh"
 #include "util/List1.hh"
 using namespace std;
 
-Log srvlog;  // log all important events for security and debugging
+Log srvlog; // log all important events for security and debugging
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   try {
-    const char* ipaddr = argc >= 2 ? argv[1] : "127.0.0.1";
+    const char *ipaddr = argc >= 2 ? argv[1] : "127.0.0.1";
     const int port = argc >= 3 ? atoi(argv[2]) : 8000;
     Socket::classInit();
     IPV4Socket s(ipaddr, port);
 
-    constexpr uint32_t test = 0x01020304U; // little endian 4 3 2 1
+    constexpr uint32_t test = 0; // little endian 4 3 2 1
     s.send(test);
-    Buffer& in = s.getIn();
+    Buffer &in = s.getIn();
     switch (test) {
-      case 0: { 
-        uint32_t temp = in.readU32();
-        cout << temp << endl;
-        break;
+    case 0: {
+      uint32_t temp = in.readU32();
+      cout << temp << endl;
+      break;
+    }
+    case 1: {
+      for (uint32_t i = 0; i < 10; i++) {
+        cout << in.readU32() << endl;
       }
-      case 1: {
-        for (uint32_t i = 0; i < 10; i++) {
-          cout << in.readU32() << endl;
-        }
-        break;
+      break;
+    }
+    case 2: {
+      uint8_t len = (int)in.readU8();
+      for (int i = 0; i < len; i++) {
+        cout << in.readI8();
       }
-      case 2: {
-        uint8_t len = (int)in.readU8();
-        for (int i = 0; i < len; i++) {
-          cout << in.readI8();
-        }
-        cout << endl;
-        len = (int)in.readU8();
-        for (int i = 0; i < len; i++) {
-          cout << in.readI8();
-        }
-        cout << endl;
-        // TODO: Need a way to know when @ end of buffer
-        break;
+      cout << endl;
+      len = (int)in.readU8();
+      for (int i = 0; i < len; i++) {
+        cout << in.readI8();
       }
-      #if 0
+      cout << endl;
+      // TODO: Need a way to know when @ end of buffer
+      break;
+    }
+#if 0
       case 4: {
         List1<uint32_t> temp = in.readList<uint32_t>();  // <List1<uint32_t>>();
         // cout<<"Used: "<<temp.getUsed()<<endl;
@@ -69,10 +69,10 @@ int main(int argc, char* argv[]) {
 
         break;
       }
-      #endif
+#endif
     }
-  Socket::classCleanup();
-  } catch (const Ex& e) {
+    Socket::classCleanup();
+  } catch (const Ex &e) {
     cerr << e << '\n';
   }
   return 0;
