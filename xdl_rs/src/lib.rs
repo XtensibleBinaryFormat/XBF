@@ -17,8 +17,8 @@ impl LinesCodec {
     }
 
     pub fn send_message(&mut self, message: &str) -> io::Result<()> {
-        self.writer.write(message.as_bytes())?;
-        self.writer.write(b"\n")?;
+        self.writer.write_all(message.as_bytes())?;
+        self.writer.write_all(b"\n")?;
         Ok(())
     }
 
