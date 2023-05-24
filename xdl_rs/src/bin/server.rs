@@ -22,14 +22,12 @@ fn main() -> io::Result<()> {
 
     let listener = TcpListener::bind(address)?;
 
-    for stream in listener.incoming() {
-        if let Ok(stream) = stream {
-            std::thread::spawn(move || {
-                if let Err(e) = handle_connection(stream) {
-                    eprintln!("Error: {}", e);
-                }
-            });
-        }
+    for stream in listener.incoming().flatten() {
+        std::thread::spawn(move || {
+            if let Err(e) = handle_connection(stream) {
+                eprintln!("Error: {}", e);
+            }
+        });
     }
 
     Ok(())
