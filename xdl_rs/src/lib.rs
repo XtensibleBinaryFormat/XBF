@@ -99,8 +99,16 @@ impl XdlType {
 }
 
 #[derive(Debug)]
-pub struct XdlStruct {}
+pub struct XdlStruct {
+    name: String,
+    fields: Vec<(String, XdlType)>,
+}
 
+// TODO: equivalent of this that's more generic for a list
+// ie. return a vec<u8> instead of String, then have separate fn
+// to convert those bytes to a string with a wrapper fn
+// TODO: should this follow conventions of other read and write functions and take a mutable
+// reference?
 fn exact_string(buf: &mut impl Read) -> io::Result<String> {
     let length = buf.read_u16::<NetworkEndian>()?;
     let mut bytes = vec![0u8; length as usize];
