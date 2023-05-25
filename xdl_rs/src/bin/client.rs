@@ -1,16 +1,15 @@
 use std::io;
 use std::net::TcpStream;
 
-use xdl_rs::LinesCodec;
+use xdl_rs::XdlType;
 
 fn main() -> io::Result<()> {
-    let stream = TcpStream::connect("localhost:8888")?;
+    let mut stream = TcpStream::connect("localhost:8888")?;
 
-    let mut codec = LinesCodec::new(stream)?;
-    codec.send_message("hello world")?;
+    let my_data = XdlType::U8(69);
+    my_data.serialize(&mut stream)?;
 
-    let message = codec.receive_message()?;
-    println!("{}", message);
-
+    let back_from_server = XdlType::deserialize(&mut stream)?;
+    println!("{:?}", back_from_server);
     Ok(())
 }

@@ -1,37 +1,8 @@
-use std::{
-    io::{self, BufRead, Read, Write},
-    net::TcpStream,
-};
+use std::io::{self, Read, Write};
 
 use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 
-pub struct LinesCodec {
-    reader: io::BufReader<TcpStream>,
-    writer: io::LineWriter<TcpStream>,
-}
-
-impl LinesCodec {
-    pub fn new(stream: TcpStream) -> io::Result<Self> {
-        let writer = io::LineWriter::new(stream.try_clone()?);
-        let reader = io::BufReader::new(stream);
-
-        Ok(Self { reader, writer })
-    }
-
-    pub fn send_message(&mut self, message: &str) -> io::Result<()> {
-        self.writer.write_all(message.as_bytes())?;
-        self.writer.write_all(b"\n")?;
-        Ok(())
-    }
-
-    pub fn receive_message(&mut self) -> io::Result<String> {
-        let mut message = String::new();
-        self.reader.read_line(&mut message)?;
-        message.pop();
-        Ok(message)
-    }
-}
-
+#[derive(Debug)]
 pub enum XdlType {
     U8(u8),
     U16(u16),
@@ -119,7 +90,7 @@ impl XdlType {
                 match num {
                     0 => Ok(XdlType::Bool(false)),
                     1 => Ok(XdlType::Bool(true)),
-                    _ => todo!(),
+                    _ => todo!(), // TODO: this should theoretically be unreachable
                 }
             }
             _ => todo!(),
@@ -127,6 +98,7 @@ impl XdlType {
     }
 }
 
+#[derive(Debug)]
 pub struct XdlStruct {}
 
 fn exact_string(buf: &mut impl Read) -> io::Result<String> {

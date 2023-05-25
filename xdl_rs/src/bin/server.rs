@@ -2,17 +2,17 @@ use std::eprintln;
 use std::io;
 use std::net::{TcpListener, TcpStream};
 
-use xdl_rs::LinesCodec;
+use xdl_rs::XdlType;
 
-fn handle_connection(stream: TcpStream) -> io::Result<()> {
+fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
     let peer_addr = stream.peer_addr().expect("Stream has peer address");
     eprintln!("New connection from {}", peer_addr);
-    let mut codec = LinesCodec::new(stream).unwrap();
+    let xdl = XdlType::deserialize(&mut stream)?;
 
-    let message: String = codec.receive_message()?;
-    eprintln!("received: {}", message);
-    let to_send: String = message.chars().rev().collect();
-    codec.send_message(&to_send)?;
+    eprintln!("received: {:?}", xdl);
+
+    let to_send = XdlType::String("Thank you for your message!".to_string());
+    to_send.serialize(&mut stream)?;
     Ok(())
 }
 
