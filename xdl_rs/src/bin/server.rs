@@ -9,10 +9,9 @@ fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
     eprintln!("New connection from {}", peer_addr);
     let xdl = XdlType::deserialize(&mut stream)?;
 
-    eprintln!("received: {:?}", xdl);
+    // eprintln!("received: {:?}", xdl);
 
-    let to_send = XdlType::String("Thank you for your message!".to_string());
-    to_send.serialize(&mut stream)?;
+    dbg!("received: {:?}", xdl);
     Ok(())
 }
 
