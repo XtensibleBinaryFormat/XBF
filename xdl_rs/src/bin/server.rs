@@ -3,15 +3,13 @@ use std::io;
 use std::net::{TcpListener, TcpStream};
 
 use xdl_rs::XdlType;
+use xdl_rs::XdlTypeId;
 
 fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
     let peer_addr = stream.peer_addr().expect("Stream has peer address");
     eprintln!("New connection from {}", peer_addr);
     let xdl = XdlType::deserialize(&mut stream)?;
-
-    // eprintln!("received: {:?}", xdl);
-
-    dbg!("received: {:?}", xdl);
+    dbg!(xdl);
     Ok(())
 }
 

@@ -4,7 +4,7 @@ use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 #[repr(u8)]
-pub enum XdlDiscriminant {
+pub enum XdlTypeId {
     U8 = 0,
     U16,
     U32,
@@ -21,23 +21,23 @@ pub enum XdlDiscriminant {
     Struct,
 }
 
-impl From<u8> for XdlDiscriminant {
+impl From<u8> for XdlTypeId {
     fn from(x: u8) -> Self {
         match x {
-            0 => XdlDiscriminant::U8,
-            1 => XdlDiscriminant::U16,
-            2 => XdlDiscriminant::U32,
-            3 => XdlDiscriminant::U64,
-            4 => XdlDiscriminant::I8,
-            5 => XdlDiscriminant::I16,
-            6 => XdlDiscriminant::I32,
-            7 => XdlDiscriminant::I64,
-            8 => XdlDiscriminant::F32,
-            9 => XdlDiscriminant::F64,
-            10 => XdlDiscriminant::String,
-            11 => XdlDiscriminant::Bool,
-            12 => XdlDiscriminant::Vec,
-            13 => XdlDiscriminant::Struct,
+            0 => XdlTypeId::U8,
+            1 => XdlTypeId::U16,
+            2 => XdlTypeId::U32,
+            3 => XdlTypeId::U64,
+            4 => XdlTypeId::I8,
+            5 => XdlTypeId::I16,
+            6 => XdlTypeId::I32,
+            7 => XdlTypeId::I64,
+            8 => XdlTypeId::F32,
+            9 => XdlTypeId::F64,
+            10 => XdlTypeId::String,
+            11 => XdlTypeId::Bool,
+            12 => XdlTypeId::Vec,
+            13 => XdlTypeId::Struct,
             _ => unreachable!(),
         }
     }
@@ -61,42 +61,94 @@ pub enum XdlType {
     Struct(XdlStruct),
 }
 
+macro_rules! xdl_from_impl {
+    ($ty:ty, $xdl_type:tt) => {
+        impl From<$ty> for XdlType {
+            fn from(x: $ty) -> Self {
+                XdlType::$xdl_type(x)
+            }
+        }
+    };
+}
+
+xdl_from_impl!(u8, U8);
+xdl_from_impl!(u16, U16);
+xdl_from_impl!(u32, U32);
+xdl_from_impl!(u64, U64);
+xdl_from_impl!(i8, I8);
+xdl_from_impl!(i16, I16);
+xdl_from_impl!(i32, I32);
+xdl_from_impl!(i64, I64);
+xdl_from_impl!(f32, F32);
+xdl_from_impl!(f64, F64);
+xdl_from_impl!(String, String);
+xdl_from_impl!(bool, Bool);
+
 #[derive(Debug, Clone)]
 pub struct XdlVec {
-    dis: XdlDiscriminant,
+    inner_type: XdlTypeId,
     data: Vec<XdlType>,
 }
 
 impl XdlVec {
-    pub fn new(vec: Vec<XdlType>, discriminant: XdlDiscriminant) -> Self {
-        assert!(vec.iter().all(|x| x.get_discriminant() == discriminant));
+    pub fn new(vec: Vec<XdlType>, inner_type: XdlTypeId) -> Self {
+        // it IS possible to have a vec of vecs where the inner vecs have different inner types
+        // unknown whether this is intended by the spec
+        // leaving it like this would make this code significantly less complicated
+        assert!(vec.iter().all(|x| x.get_type_id() == inner_type));
+
         Self {
-            dis: discriminant,
+            inner_type,
             data: vec,
         }
     }
+
+    fn serialize_vec(
+        &self,
+        send_inner_type_id: SendInnerVecTypeId,
+        buf: &mut impl Write,
+    ) -> io::Result<()> {
+        let len = self.data.len() as u16;
+        buf.write_u16::<NetworkEndian>(len)?;
+        match send_inner_type_id {
+            SendInnerVecTypeId::Yes => {
+                buf.write_u8(self.inner_type as u8)?;
+            }
+            SendInnerVecTypeId::No => {}
+        }
+        for x in self.data.iter() {
+            x.serialize_no_type_id(buf)?;
+        }
+        Ok(())
+    }
+}
+
+enum SendInnerVecTypeId {
+    Yes,
+    No,
 }
 
 impl XdlType {
-    pub fn get_discriminant(&self) -> XdlDiscriminant {
+    fn get_type_id(&self) -> XdlTypeId {
         match self {
-            XdlType::U8(_) => XdlDiscriminant::U8,
-            XdlType::U16(_) => XdlDiscriminant::U16,
-            XdlType::U32(_) => XdlDiscriminant::U32,
-            XdlType::U64(_) => XdlDiscriminant::U64,
-            XdlType::I8(_) => XdlDiscriminant::I8,
-            XdlType::I16(_) => XdlDiscriminant::I16,
-            XdlType::I32(_) => XdlDiscriminant::I32,
-            XdlType::I64(_) => XdlDiscriminant::I64,
-            XdlType::F32(_) => XdlDiscriminant::F32,
-            XdlType::F64(_) => XdlDiscriminant::F64,
-            XdlType::String(_) => XdlDiscriminant::String,
-            XdlType::Bool(_) => XdlDiscriminant::Bool,
-            XdlType::Vec(_) => XdlDiscriminant::Vec,
-            XdlType::Struct(_) => XdlDiscriminant::Struct,
+            XdlType::U8(_) => XdlTypeId::U8,
+            XdlType::U16(_) => XdlTypeId::U16,
+            XdlType::U32(_) => XdlTypeId::U32,
+            XdlType::U64(_) => XdlTypeId::U64,
+            XdlType::I8(_) => XdlTypeId::I8,
+            XdlType::I16(_) => XdlTypeId::I16,
+            XdlType::I32(_) => XdlTypeId::I32,
+            XdlType::I64(_) => XdlTypeId::I64,
+            XdlType::F32(_) => XdlTypeId::F32,
+            XdlType::F64(_) => XdlTypeId::F64,
+            XdlType::String(_) => XdlTypeId::String,
+            XdlType::Bool(_) => XdlTypeId::Bool,
+            XdlType::Vec(_) => XdlTypeId::Vec,
+            XdlType::Struct(_) => XdlTypeId::Struct,
         }
     }
-    pub fn serialize_no_discriminant(&self, buf: &mut impl Write) -> io::Result<()> {
+
+    pub fn serialize_no_type_id(&self, buf: &mut impl Write) -> io::Result<()> {
         match self {
             XdlType::U8(x) => buf.write_u8(*x)?,
             XdlType::U16(x) => buf.write_u16::<NetworkEndian>(*x)?,
@@ -115,96 +167,77 @@ impl XdlType {
                 buf.write_all(message)?
             }
             XdlType::Bool(x) => buf.write_u8(u8::from(*x))?,
-            XdlType::Vec(x) => {
-                let len = x.data.len() as u16;
-                buf.write_u16::<NetworkEndian>(len)?;
-                let discriminant = x.dis;
-                buf.write_u8(discriminant as u8)?;
-                for x in x.data.iter() {
-                    x.serialize_no_discriminant(buf)?
-                }
-            }
+            XdlType::Vec(x) => (*x).serialize_vec(SendInnerVecTypeId::No, buf)?,
             _ => todo!(),
         };
 
         Ok(())
     }
 
-    pub fn serialize(&self, buf: &mut impl Write) -> io::Result<()> {
-        buf.write_u8(self.get_discriminant() as u8)?;
-        self.serialize_no_discriminant(buf)?;
+    pub fn serialize_with_type_id(&self, buf: &mut impl Write) -> io::Result<()> {
+        buf.write_u8(self.get_type_id() as u8)?;
+        if let XdlType::Vec(x) = self {
+            x.serialize_vec(SendInnerVecTypeId::Yes, buf)?
+        } else {
+            self.serialize_no_type_id(buf)?;
+        }
         Ok(())
     }
 
-    fn deserialize_vec(
-        discriminant: XdlDiscriminant,
-        len: u16,
+    pub fn deserialize_with_id(type_id: XdlTypeId, buf: &mut impl Read) -> io::Result<Self> {
+        Ok(match type_id {
+            XdlTypeId::U8 => buf.read_u8()?.into(),
+            XdlTypeId::U16 => buf.read_u16::<NetworkEndian>()?.into(),
+            XdlTypeId::U32 => buf.read_u32::<NetworkEndian>()?.into(),
+            XdlTypeId::U64 => buf.read_u64::<NetworkEndian>()?.into(),
+            XdlTypeId::I8 => buf.read_i8()?.into(),
+            XdlTypeId::I16 => buf.read_i16::<NetworkEndian>()?.into(),
+            XdlTypeId::I32 => buf.read_i32::<NetworkEndian>()?.into(),
+            XdlTypeId::I64 => buf.read_i64::<NetworkEndian>()?.into(),
+            XdlTypeId::F32 => buf.read_f32::<NetworkEndian>()?.into(),
+            XdlTypeId::F64 => buf.read_f64::<NetworkEndian>()?.into(),
+            XdlTypeId::String => exact_string(buf)?.into(),
+            XdlTypeId::Bool => match buf.read_u8()? {
+                0 => false,
+                1 => true,
+                _ => unreachable!(),
+            }
+            .into(),
+            XdlTypeId::Vec => {
+                let len = buf.read_u16::<NetworkEndian>()?;
+                let vec_inner_type_id = buf.read_u8()?.into();
+                XdlType::deserialize_consecutive_with_id(vec_inner_type_id, len, buf)?
+            }
+            XdlTypeId::Struct => todo!(),
+        })
+    }
+
+    pub fn deserialize_consecutive_with_id(
+        type_id: XdlTypeId,
+        number: u16,
         buf: &mut impl Read,
     ) -> io::Result<Self> {
         let mut vec = vec![];
-        vec.reserve(len as usize);
+        vec.reserve(number as usize);
 
-        for _ in 0..len {
-            match discriminant {
-                XdlDiscriminant::U8 => vec.push(XdlType::U8(buf.read_u8()?)),
-                XdlDiscriminant::U16 => vec.push(XdlType::U16(buf.read_u16::<NetworkEndian>()?)),
-                XdlDiscriminant::U32 => vec.push(XdlType::U32(buf.read_u32::<NetworkEndian>()?)),
-                XdlDiscriminant::U64 => vec.push(XdlType::U64(buf.read_u64::<NetworkEndian>()?)),
-                XdlDiscriminant::I8 => vec.push(XdlType::I8(buf.read_i8()?)),
-                XdlDiscriminant::I16 => vec.push(XdlType::I16(buf.read_i16::<NetworkEndian>()?)),
-                XdlDiscriminant::I32 => vec.push(XdlType::I32(buf.read_i32::<NetworkEndian>()?)),
-                XdlDiscriminant::I64 => vec.push(XdlType::I64(buf.read_i64::<NetworkEndian>()?)),
-                XdlDiscriminant::F32 => vec.push(XdlType::F32(buf.read_f32::<NetworkEndian>()?)),
-                XdlDiscriminant::F64 => vec.push(XdlType::F64(buf.read_f64::<NetworkEndian>()?)),
-                XdlDiscriminant::String => vec.push(XdlType::String(exact_string(buf)?)),
-                XdlDiscriminant::Bool => vec.push(XdlType::Bool(match buf.read_u8()? {
-                    0 => false,
-                    1 => true,
-                    _ => unreachable!(),
-                })),
-                XdlDiscriminant::Vec => {
+        for _ in 0..number {
+            let val = match type_id {
+                XdlTypeId::Vec => {
                     let len = buf.read_u16::<NetworkEndian>()?;
-                    let dis = buf.read_u8()?.into();
-                    vec.push(XdlType::deserialize_vec(dis, len, buf)?);
+                    let vec_inner_type_id = buf.read_u8()?.into();
+                    XdlType::deserialize_consecutive_with_id(vec_inner_type_id, len, buf)?
                 }
-                _ => todo!(),
-            }
+                _ => XdlType::deserialize_with_id(type_id, buf)?,
+            };
+            vec.push(val);
         }
-        Ok(XdlType::Vec(XdlVec::new(vec, discriminant)))
+        Ok(XdlType::Vec(XdlVec::new(vec, type_id)))
     }
 
     pub fn deserialize(buf: &mut impl Read) -> io::Result<Self> {
-        let discriminant = buf.read_u8()?.into();
-        match discriminant {
-            XdlDiscriminant::U8 => Ok(XdlType::U8(buf.read_u8()?)),
-            XdlDiscriminant::U16 => Ok(XdlType::U16(buf.read_u16::<NetworkEndian>()?)),
-            XdlDiscriminant::U32 => Ok(XdlType::U32(buf.read_u32::<NetworkEndian>()?)),
-            XdlDiscriminant::U64 => Ok(XdlType::U64(buf.read_u64::<NetworkEndian>()?)),
-            XdlDiscriminant::I8 => Ok(XdlType::I8(buf.read_i8()?)),
-            XdlDiscriminant::I16 => Ok(XdlType::I16(buf.read_i16::<NetworkEndian>()?)),
-            XdlDiscriminant::I32 => Ok(XdlType::I32(buf.read_i32::<NetworkEndian>()?)),
-            XdlDiscriminant::I64 => Ok(XdlType::I64(buf.read_i64::<NetworkEndian>()?)),
-            XdlDiscriminant::F32 => Ok(XdlType::F32(buf.read_f32::<NetworkEndian>()?)),
-            XdlDiscriminant::F64 => Ok(XdlType::F64(buf.read_f64::<NetworkEndian>()?)),
-            XdlDiscriminant::String => {
-                let string = exact_string(buf)?;
-                Ok(XdlType::String(string))
-            }
-            XdlDiscriminant::Bool => {
-                let num = buf.read_u8()?;
-                match num {
-                    0 => Ok(XdlType::Bool(false)),
-                    1 => Ok(XdlType::Bool(true)),
-                    _ => unreachable!(),
-                }
-            }
-            XdlDiscriminant::Vec => {
-                let len = buf.read_u16::<NetworkEndian>()?;
-                let discriminant = buf.read_u8()?.into();
-                XdlType::deserialize_vec(discriminant, len, buf)
-            }
-            _ => todo!(),
-        }
+        let type_id = buf.read_u8()?.into();
+        dbg!(type_id);
+        Ok(XdlType::deserialize_with_id(type_id, buf)?)
     }
 }
 
