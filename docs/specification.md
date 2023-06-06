@@ -50,11 +50,26 @@ single Unicode Scalar Value:
 Whether this is better than just sending a String of length one is to be
 determined.
 
+#### Optional Types
+
+It may be useful to add support for a field or type that may specifically
+contain nothing. This avoids the need to have a Void or Null type, and encodes
+directly in the type system when something may not be present. This seems most
+useful as a field within a Struct or an element in a Vector. Optional types are
+something that takes inspiration from Rust's type system, but it is also present
+within C++ as std::optional.
+
 ## Direct Representations
 
 ### Boolean
 
 A boolean should be sent as an unsigned 8-bit integer with the value 0 or 1.
+However, should an arbitrary U8 be sent a value of 0 should be taken to be
+false, and any other value be taken to be true.
+
+REQUEST FOR REVIEW: Should we allow this coercion behavior from a U8 to a
+Boolean, or should exclusively 0 and 1 values be allowed, with an exception /
+panic occuring if neither of those values is found?
 
 ### Integers
 
