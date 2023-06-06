@@ -2,16 +2,9 @@ mod xdl_primitive;
 mod xdl_struct;
 mod xdl_vec;
 
-use xdl_primitive::{XdlPrimitive, XdlPrimitiveMetadata};
+use xdl_primitive::{XdlPrimitive, XdlPrimitiveId, XdlPrimitiveMetadata};
 use xdl_struct::{XdlStruct, XdlStructMetadata};
 use xdl_vec::{XdlVec, XdlVecMetadata};
-
-#[derive(Debug, Clone)]
-pub enum XdlType {
-    Primitive(XdlPrimitive),
-    Vec(XdlVec),
-    Struct(XdlStruct),
-}
 
 pub enum XdlMetadata {
     Primitive(XdlPrimitiveMetadata),
@@ -19,21 +12,26 @@ pub enum XdlMetadata {
     Struct(XdlStructMetadata),
 }
 
-// impl XdlMetadata {
-//     pub fn new_primitive(type_id: XdlTypeId) -> Self {
-//         Self::Primitive(XdlPrimitiveMetadata { type_id })
-//     }
-//
-//     pub fn new_vec(inner_type_metadata: XdlMetadata) -> Self {
-//         Self::Vec(XdlVecMetadata {
-//             inner_type_metadata: Box::new(inner_type_metadata),
-//         })
-//     }
-//
-//     pub fn new_struct(name: String, fields: Vec<(String, Box<XdlMetadata>)>) -> Self {
-//         Self::Struct(XdlStructMetadata { name, fields })
-//     }
-// }
+impl XdlMetadata {
+    pub fn new_primitive(_type_id: XdlPrimitiveId) -> Self {
+        todo!()
+    }
+
+    pub fn new_vec(_inner_type: XdlMetadata) -> Self {
+        todo!()
+    }
+
+    pub fn new_struct(_spec: XdlStructMetadata) -> Self {
+        todo!()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum XdlType {
+    Primitive(XdlPrimitive),
+    Vec(XdlVec),
+    Struct(XdlStruct),
+}
 
 impl XdlType {
     // pub fn serialize_with_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
