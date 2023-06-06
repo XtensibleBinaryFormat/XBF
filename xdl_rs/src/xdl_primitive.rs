@@ -1,5 +1,5 @@
-use byteorder::{LittleEndian, WriteBytesExt};
-use std::io::{self, Write};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::io::{self, Read, Write};
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u8)]
@@ -48,7 +48,7 @@ impl From<u8> for XdlPrimitiveId {
 
 pub struct XdlPrimitiveMetadata(pub XdlPrimitiveId);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum XdlPrimitive {
     Bool(bool),
     U8(u8),
@@ -125,6 +125,63 @@ impl XdlPrimitive {
             }
         }
     }
+
+    pub fn deserialize_unknown_metadata(reader: &mut impl Read) -> io::Result<XdlPrimitive> {
+        let type_to_deserialize = XdlPrimitiveMetadata(reader.read_u8()?.into());
+        Self::deserialize_known_metadata(type_to_deserialize, reader)
+    }
+
+    pub fn deserialize_known_metadata(
+        metadata: XdlPrimitiveMetadata,
+        reader: &mut impl Read,
+    ) -> io::Result<XdlPrimitive> {
+        let type_to_deserialize = metadata.0;
+        match type_to_deserialize {
+            XdlPrimitiveId::Bool => reader.read_u8().map(|x| XdlPrimitive::Bool(x == 1)),
+            XdlPrimitiveId::U8 => reader.read_u8().map(|x| XdlPrimitive::U8(x)),
+            XdlPrimitiveId::U16 => reader
+                .read_u16::<LittleEndian>()
+                .map(|x| XdlPrimitive::U16(x)),
+            XdlPrimitiveId::U32 => reader
+                .read_u32::<LittleEndian>()
+                .map(|x| XdlPrimitive::U32(x)),
+            XdlPrimitiveId::U64 => reader
+                .read_u64::<LittleEndian>()
+                .map(|x| XdlPrimitive::U64(x)),
+            XdlPrimitiveId::U128 => reader
+                .read_u128::<LittleEndian>()
+                .map(|x| XdlPrimitive::U128(x)),
+            XdlPrimitiveId::U256 => unimplemented!(),
+            XdlPrimitiveId::I8 => reader.read_i8().map(|x| XdlPrimitive::I8(x)),
+            XdlPrimitiveId::I16 => reader
+                .read_i16::<LittleEndian>()
+                .map(|x| XdlPrimitive::I16(x)),
+            XdlPrimitiveId::I32 => reader
+                .read_i32::<LittleEndian>()
+                .map(|x| XdlPrimitive::I32(x)),
+            XdlPrimitiveId::I64 => reader
+                .read_i64::<LittleEndian>()
+                .map(|x| XdlPrimitive::I64(x)),
+            XdlPrimitiveId::I128 => reader
+                .read_i128::<LittleEndian>()
+                .map(|x| XdlPrimitive::I128(x)),
+            XdlPrimitiveId::I256 => unimplemented!(),
+            XdlPrimitiveId::F32 => reader
+                .read_f32::<LittleEndian>()
+                .map(|x| XdlPrimitive::F32(x)),
+            XdlPrimitiveId::F64 => reader
+                .read_f64::<LittleEndian>()
+                .map(|x| XdlPrimitive::F64(x)),
+            XdlPrimitiveId::String => {
+                let len = reader.read_u16::<LittleEndian>()?;
+                let mut buf = vec![0; len as usize];
+                reader.read_exact(&mut buf)?;
+                let string = String::from_utf8(buf)
+                    .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid utf8"))?;
+                Ok(XdlPrimitive::String(string))
+            }
+        }
+    }
 }
 
 macro_rules! xdl_primitive_from_impl {
@@ -160,24 +217,54 @@ xdl_primitive_from_impl!(String, String);
 mod test {
     use super::*;
 
-    macro_rules! with_metadata_test {
+    macro_rules! serialize_with_metadata_test {
         ($xdl_type:tt, $test_num:expr) => {
             let primitive = XdlPrimitive::$xdl_type($test_num);
             let mut writer = Vec::new();
+
             primitive.serialize_with_metadata(&mut writer).unwrap();
+
             let mut expected = vec![XdlPrimitiveMetadata::from(&primitive).0 as u8];
             expected.extend_from_slice(&$test_num.to_le_bytes());
             assert_eq!(writer, expected);
         };
     }
 
-    macro_rules! without_metadata_test {
+    macro_rules! serialize_without_metadata_test {
         ($xdl_type:tt, $test_num:expr) => {
             let primitive = XdlPrimitive::$xdl_type($test_num);
             let mut writer = Vec::new();
             primitive.serialize_without_metadata(&mut writer).unwrap();
+
             let expected = $test_num.to_le_bytes();
             assert_eq!(writer, expected);
+        };
+    }
+
+    macro_rules! deserialize_unknown_metadata_test {
+        ($xdl_type:tt, $test_num:expr) => {
+            use std::io::Cursor;
+
+            let mut data = vec![XdlPrimitiveId::$xdl_type as u8];
+            data.extend_from_slice(&$test_num.to_le_bytes());
+            let mut reader = Cursor::new(data);
+
+            let primitive = XdlPrimitive::deserialize_unknown_metadata(&mut reader).unwrap();
+            assert_eq!(primitive, XdlPrimitive::$xdl_type($test_num));
+        };
+    }
+
+    macro_rules! deserialize_known_metadata_test {
+        ($xdl_type:tt, $test_num:expr) => {
+            use std::io::Cursor;
+
+            let known_metadata = XdlPrimitiveMetadata(XdlPrimitiveId::$xdl_type);
+            let data = &$test_num.to_le_bytes();
+            let mut reader = Cursor::new(data);
+
+            let primitive =
+                XdlPrimitive::deserialize_known_metadata(known_metadata, &mut reader).unwrap();
+            assert_eq!(primitive, XdlPrimitive::$xdl_type($test_num));
         };
     }
 
@@ -231,56 +318,66 @@ mod test {
     #[test]
     fn u8_serialize_with_metadata_works() {
         const TEST_NUM: u8 = 42;
-        with_metadata_test!(U8, TEST_NUM);
+        serialize_with_metadata_test!(U8, TEST_NUM);
     }
     #[test]
     fn u8_serialize_without_metadata_works() {
         const TEST_NUM: u8 = 42;
-        without_metadata_test!(U8, TEST_NUM);
+        serialize_without_metadata_test!(U8, TEST_NUM);
+    }
+    #[test]
+    fn u8_deserialize_unknown_metadata_works() {
+        const TEST_NUM: u8 = 42;
+        deserialize_unknown_metadata_test!(U8, TEST_NUM);
+    }
+    #[test]
+    fn u8_deserialize_known_metadata_works() {
+        const TEST_NUM: u8 = 42;
+        deserialize_known_metadata_test!(U8, TEST_NUM);
     }
 
     #[test]
     fn u16_serialize_with_metadata_works() {
         const TEST_NUM: u16 = 420;
-        with_metadata_test!(U16, TEST_NUM);
+        serialize_with_metadata_test!(U16, TEST_NUM);
     }
     #[test]
     fn u16_serialize_without_metadata_works() {
         const TEST_NUM: u16 = 420;
-        without_metadata_test!(U16, TEST_NUM);
+        serialize_without_metadata_test!(U16, TEST_NUM);
     }
 
     #[test]
     fn u32_serialize_with_metadata_works() {
         const TEST_NUM: u32 = 100_000;
-        with_metadata_test!(U32, TEST_NUM);
+        serialize_with_metadata_test!(U32, TEST_NUM);
     }
     #[test]
     fn u32_serialize_without_metadata_works() {
         const TEST_NUM: u32 = 100_000;
-        without_metadata_test!(U32, TEST_NUM);
+        serialize_without_metadata_test!(U32, TEST_NUM);
     }
 
     #[test]
     fn u64_serialize_with_metadata_works() {
         const TEST_NUM: u64 = 100_000_000;
-        with_metadata_test!(U64, TEST_NUM);
+        serialize_with_metadata_test!(U64, TEST_NUM);
     }
     #[test]
     fn u64_serialize_without_metadata_works() {
         const TEST_NUM: u64 = 100_000_000;
-        without_metadata_test!(U64, TEST_NUM);
+        serialize_without_metadata_test!(U64, TEST_NUM);
     }
 
     #[test]
     fn u128_serialize_with_metadata_works() {
         const TEST_NUM: u128 = 18_446_744_073_709_551_617;
-        with_metadata_test!(U128, TEST_NUM);
+        serialize_with_metadata_test!(U128, TEST_NUM);
     }
     #[test]
     fn u128_serialize_without_metadata_works() {
         const TEST_NUM: u128 = 18_446_744_073_709_551_617;
-        without_metadata_test!(U128, TEST_NUM);
+        serialize_without_metadata_test!(U128, TEST_NUM);
     }
 
     #[test]
@@ -299,56 +396,56 @@ mod test {
     #[test]
     fn i8_serialize_with_metadata_works() {
         const TEST_NUM: i8 = 42;
-        with_metadata_test!(I8, TEST_NUM);
+        serialize_with_metadata_test!(I8, TEST_NUM);
     }
     #[test]
     fn i8_serialize_without_metadata_works() {
         const TEST_NUM: i8 = 42;
-        without_metadata_test!(I8, TEST_NUM);
+        serialize_without_metadata_test!(I8, TEST_NUM);
     }
 
     #[test]
     fn i16_serialize_with_metadata_works() {
         const TEST_NUM: i16 = 420;
-        with_metadata_test!(I16, TEST_NUM);
+        serialize_with_metadata_test!(I16, TEST_NUM);
     }
     #[test]
     fn i16_serialize_without_metadata_works() {
         const TEST_NUM: i16 = 420;
-        without_metadata_test!(I16, TEST_NUM);
+        serialize_without_metadata_test!(I16, TEST_NUM);
     }
 
     #[test]
     fn i32_serialize_with_metadata_works() {
         const TEST_NUM: i32 = 100_000;
-        with_metadata_test!(I32, TEST_NUM);
+        serialize_with_metadata_test!(I32, TEST_NUM);
     }
     #[test]
     fn i32_serialize_without_metadata_works() {
         const TEST_NUM: i32 = 100_000;
-        without_metadata_test!(I32, TEST_NUM);
+        serialize_without_metadata_test!(I32, TEST_NUM);
     }
 
     #[test]
     fn i64_serialize_with_metadata_works() {
         const TEST_NUM: i64 = 100_000_000;
-        with_metadata_test!(I64, TEST_NUM);
+        serialize_with_metadata_test!(I64, TEST_NUM);
     }
     #[test]
     fn i64_serialize_without_metadata_works() {
         const TEST_NUM: i64 = 100_000_000;
-        without_metadata_test!(I64, TEST_NUM);
+        serialize_without_metadata_test!(I64, TEST_NUM);
     }
 
     #[test]
     fn i128_serialize_with_metadata_works() {
         const TEST_NUM: i128 = 18_446_744_073_709_551_617;
-        with_metadata_test!(I128, TEST_NUM);
+        serialize_with_metadata_test!(I128, TEST_NUM);
     }
     #[test]
     fn i128_serialize_without_metadata_works() {
         const TEST_NUM: i128 = 18_446_744_073_709_551_617;
-        without_metadata_test!(I128, TEST_NUM);
+        serialize_without_metadata_test!(I128, TEST_NUM);
     }
 
     #[test]
@@ -367,23 +464,23 @@ mod test {
     #[test]
     fn f32_serialize_with_metadata_works() {
         const TEST_NUM: f32 = 69.0;
-        with_metadata_test!(F32, TEST_NUM);
+        serialize_with_metadata_test!(F32, TEST_NUM);
     }
     #[test]
     fn f32_serialize_without_metadata_works() {
         const TEST_NUM: f32 = 69.0;
-        without_metadata_test!(F32, TEST_NUM);
+        serialize_without_metadata_test!(F32, TEST_NUM);
     }
 
     #[test]
     fn f64_serialize_with_metadata_works() {
         const TEST_NUM: f64 = 69.0;
-        with_metadata_test!(F64, TEST_NUM);
+        serialize_with_metadata_test!(F64, TEST_NUM);
     }
     #[test]
     fn f64_serialize_without_metadata_works() {
         const TEST_NUM: f64 = 69.0;
-        without_metadata_test!(F64, TEST_NUM);
+        serialize_without_metadata_test!(F64, TEST_NUM);
     }
 
     #[test]
