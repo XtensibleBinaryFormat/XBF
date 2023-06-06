@@ -126,7 +126,7 @@ impl XdlPrimitive {
         }
     }
 
-    pub fn deserialize_unknown_metadata(reader: &mut impl Read) -> io::Result<XdlPrimitive> {
+    pub fn deserialize_unknown_metadata(reader: &mut impl Read) -> io::Result<Self> {
         let type_to_deserialize = XdlPrimitiveMetadata(reader.read_u8()?.into());
         Self::deserialize_known_metadata(type_to_deserialize, reader)
     }
@@ -138,40 +138,20 @@ impl XdlPrimitive {
         let type_to_deserialize = metadata.0;
         match type_to_deserialize {
             XdlPrimitiveId::Bool => reader.read_u8().map(|x| XdlPrimitive::Bool(x == 1)),
-            XdlPrimitiveId::U8 => reader.read_u8().map(|x| XdlPrimitive::U8(x)),
-            XdlPrimitiveId::U16 => reader
-                .read_u16::<LittleEndian>()
-                .map(|x| XdlPrimitive::U16(x)),
-            XdlPrimitiveId::U32 => reader
-                .read_u32::<LittleEndian>()
-                .map(|x| XdlPrimitive::U32(x)),
-            XdlPrimitiveId::U64 => reader
-                .read_u64::<LittleEndian>()
-                .map(|x| XdlPrimitive::U64(x)),
-            XdlPrimitiveId::U128 => reader
-                .read_u128::<LittleEndian>()
-                .map(|x| XdlPrimitive::U128(x)),
+            XdlPrimitiveId::U8 => reader.read_u8().map(XdlPrimitive::U8),
+            XdlPrimitiveId::U16 => reader.read_u16::<LittleEndian>().map(XdlPrimitive::U16),
+            XdlPrimitiveId::U32 => reader.read_u32::<LittleEndian>().map(XdlPrimitive::U32),
+            XdlPrimitiveId::U64 => reader.read_u64::<LittleEndian>().map(XdlPrimitive::U64),
+            XdlPrimitiveId::U128 => reader.read_u128::<LittleEndian>().map(XdlPrimitive::U128),
             XdlPrimitiveId::U256 => unimplemented!(),
-            XdlPrimitiveId::I8 => reader.read_i8().map(|x| XdlPrimitive::I8(x)),
-            XdlPrimitiveId::I16 => reader
-                .read_i16::<LittleEndian>()
-                .map(|x| XdlPrimitive::I16(x)),
-            XdlPrimitiveId::I32 => reader
-                .read_i32::<LittleEndian>()
-                .map(|x| XdlPrimitive::I32(x)),
-            XdlPrimitiveId::I64 => reader
-                .read_i64::<LittleEndian>()
-                .map(|x| XdlPrimitive::I64(x)),
-            XdlPrimitiveId::I128 => reader
-                .read_i128::<LittleEndian>()
-                .map(|x| XdlPrimitive::I128(x)),
+            XdlPrimitiveId::I8 => reader.read_i8().map(XdlPrimitive::I8),
+            XdlPrimitiveId::I16 => reader.read_i16::<LittleEndian>().map(XdlPrimitive::I16),
+            XdlPrimitiveId::I32 => reader.read_i32::<LittleEndian>().map(XdlPrimitive::I32),
+            XdlPrimitiveId::I64 => reader.read_i64::<LittleEndian>().map(XdlPrimitive::I64),
+            XdlPrimitiveId::I128 => reader.read_i128::<LittleEndian>().map(XdlPrimitive::I128),
             XdlPrimitiveId::I256 => unimplemented!(),
-            XdlPrimitiveId::F32 => reader
-                .read_f32::<LittleEndian>()
-                .map(|x| XdlPrimitive::F32(x)),
-            XdlPrimitiveId::F64 => reader
-                .read_f64::<LittleEndian>()
-                .map(|x| XdlPrimitive::F64(x)),
+            XdlPrimitiveId::F32 => reader.read_f32::<LittleEndian>().map(XdlPrimitive::F32),
+            XdlPrimitiveId::F64 => reader.read_f64::<LittleEndian>().map(XdlPrimitive::F64),
             XdlPrimitiveId::String => {
                 let len = reader.read_u16::<LittleEndian>()?;
                 let mut buf = vec![0; len as usize];
