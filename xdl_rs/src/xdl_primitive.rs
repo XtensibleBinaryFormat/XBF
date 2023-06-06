@@ -165,7 +165,7 @@ mod test {
             let primitive = XdlPrimitive::$xdl_type($test_num);
             let mut writer = Vec::new();
             primitive.serialize_with_metadata(&mut writer).unwrap();
-            let mut expected = vec![XdlPrimitiveId::$xdl_type as u8];
+            let mut expected = vec![XdlPrimitiveMetadata::from(&primitive).0 as u8];
             expected.extend_from_slice(&$test_num.to_le_bytes());
             assert_eq!(writer, expected);
         };
@@ -384,5 +384,37 @@ mod test {
     fn f64_serialize_without_metadata_works() {
         const TEST_NUM: f64 = 69.0;
         without_metadata_test!(F64, TEST_NUM);
+    }
+
+    #[test]
+    fn string_serialize_with_metadata_works() {
+        let test_string = "hello world".to_string();
+        let primitive = XdlPrimitive::String(test_string.clone());
+
+        let mut writer = Vec::new();
+        primitive.serialize_with_metadata(&mut writer).unwrap();
+
+        // id of the type
+        let mut expected = vec![XdlPrimitiveMetadata::from(&primitive).0 as u8];
+        // length of the string
+        expected.extend_from_slice(&(test_string.len() as u16).to_le_bytes());
+        // contents of the string
+        expected.extend_from_slice(test_string.as_bytes());
+
+        assert_eq!(writer, expected);
+    }
+    #[test]
+    fn string_serialize_without_metadata_works() {
+        let test_string = "hello world".to_string();
+        let primitive = XdlPrimitive::String(test_string.clone());
+        let mut writer = Vec::new();
+        primitive.serialize_without_metadata(&mut writer).unwrap();
+
+        // length as a u16
+        let mut expected = (&(test_string.len() as u16).to_le_bytes()).to_vec();
+        // contents of the string
+        expected.extend_from_slice(test_string.as_bytes());
+
+        assert_eq!(writer, expected);
     }
 }
