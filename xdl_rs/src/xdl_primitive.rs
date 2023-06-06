@@ -137,7 +137,7 @@ impl XdlPrimitive {
     ) -> io::Result<XdlPrimitive> {
         let type_to_deserialize = metadata.0;
         match type_to_deserialize {
-            XdlPrimitiveId::Bool => reader.read_u8().map(|x| XdlPrimitive::Bool(x == 1)),
+            XdlPrimitiveId::Bool => reader.read_u8().map(|x| XdlPrimitive::Bool(x != 0)),
             XdlPrimitiveId::U8 => reader.read_u8().map(XdlPrimitive::U8),
             XdlPrimitiveId::U16 => reader.read_u16::<LittleEndian>().map(XdlPrimitive::U16),
             XdlPrimitiveId::U32 => reader.read_u32::<LittleEndian>().map(XdlPrimitive::U32),
