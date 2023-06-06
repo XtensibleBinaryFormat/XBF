@@ -110,4 +110,58 @@ likely hold off on finishing it until the Metadata Specification is finished.
 
 ## Metadata Specification
 
+There are two primary ways to request data from an XDL server. The first is to
+ask for metadata corresponding to what a given page or server has to offer,
+after which the corresponding data will be sent. The second is to simply ask for
+the data, and no metadata will be sent. It is up to the client to determine
+whether they have the necessary metadata to receive data from a server.
+
+REQUEST FOR REVIEW:
+
+Should we say anything about what to do when a server has changed what data it
+is sending from a particular path / site? I think following semantic versioning
+might make sense for a given server / site. <https://semver.org/>
+
+As an example, the "landing page" of a server would provide the current semantic
+version of the server's pages, as well as a list of the possible pages and why
+you'd want to go to them (in a human-readable way). It would then be the
+client's responsibility to ask the server for its semantic versioning number,
+and check whether that has changed since the last time it was connected to.
+Based on the rules of semantic versioning, that would determine whether the
+client can or should ask for metadata information before receiving data.
+
+### Primitives
+
+For primitives, the metadata should be sent as a single byte discriminant value.
+After receiving one of these discriminant values, the client should read the
+following byte(s) and interpret them as the type given by the discriminant.
+
+Here is the current list of primitives and their expected discriminant values:
+
+| Primitive | Discriminant |
+| --------- | ------------ |
+| Boolean   | 0            |
+| U8        | 1            |
+| U16       | 2            |
+| U32       | 3            |
+| U64       | 4            |
+| I8        | 5            |
+| I16       | 6            |
+| I32       | 7            |
+| I64       | 8            |
+| F32       | 9            |
+| F64       | 10           |
+| String    | 11           |
+
+### Vector
+
+For a vector, a discriminant value should first be sent, similarly to primitives
+(following the same size requirement). Following this, the client should expect
+to receive metadata information for the internal type contained within the
+Vector. This process may continue recursively with nested types of Vectors and
+Structs. Once all the metadata is received, the vector will send its length and
+data as expected.
+
+### Struct
+
 UNDER CONSTRUCTION
