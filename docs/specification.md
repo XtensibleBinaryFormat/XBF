@@ -89,8 +89,9 @@ Strings should be sent as UTF-8 encoded characters. They should first send their
 length as an unsigned 16-bit integer, followed by the corresponding number of
 characters specified by their length.
 
-The chosen type for a length of a String is subject to change (possibly
-increasing to a 32-bit unsigned integer).
+REQUEST FOR REVIEW: Should the chosen length type be changed from a 16-bit
+integer to something else? The most common platforms are using 32-bit integers
+as the default "int" type, so should we choose to conform to that?
 
 ### Vector
 
