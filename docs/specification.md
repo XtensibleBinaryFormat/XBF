@@ -2,11 +2,11 @@
 
 ## Types
 
-### 12 Primitives
+### 16 Primitives
 
 - Boolean
-- U8, U16, U32, U64
-- I8, I16, I32, I64
+- U8, U16, U32, U64, U128, U256
+- I8, I16, I32, I64, I128, I256
 - F32, F64
 - String (UTF-8)
 
@@ -22,15 +22,6 @@ An aggregate type containing a name as well as named fields.
 
 This list can and should be expanded based on any new ideas we have. Possible
 candidates for inclusion include:
-
-#### U128 and I128
-
-One of the reference implementations for XDL is written in Rust, which has
-native support for these types. Their use in C++ would require compiler
-intrinsics assuming that they're supported on a given platform.
-
-The logic for adding this type would be future proofing the specification for
-when 128-bit numbers become standard on consumer grade hardware.
 
 #### Bytes
 
@@ -69,12 +60,12 @@ false, and any other value be taken to be true.
 
 REQUEST FOR REVIEW: Should we allow this coercion behavior from a U8 to a
 Boolean, or should exclusively 0 and 1 values be allowed, with an exception /
-panic occuring if neither of those values is found?
+panic occurring if neither of those values is found?
 
 ### Integers
 
-All integers should be sent in little endian format (i.e. the least significant
-byte first) with their corresponding size (8, 16, 32, or 64 bits).
+All integers should be sent in little endian format, with the least significant
+bit first.
 
 For signed integers, they should be represented in two's complement format.
 
@@ -145,13 +136,24 @@ Here is the current list of primitives and their expected discriminant values:
 | U16       | 2            |
 | U32       | 3            |
 | U64       | 4            |
-| I8        | 5            |
-| I16       | 6            |
-| I32       | 7            |
-| I64       | 8            |
-| F32       | 9            |
-| F64       | 10           |
-| String    | 11           |
+| U128      | 5            |
+| U256      | 6            |
+| I8        | 7            |
+| I16       | 8            |
+| I32       | 9            |
+| I64       | 10           |
+| I128      | 11           |
+| I256      | 12           |
+| F32       | 13           |
+| F64       | 14           |
+| String    | 15           |
+
+REQUEST FOR REVIEW:
+
+Should we leave room between some of these discriminant numbers? For example,
+leave some space between U256 and I8? That way in the future if there's ever a
+need to expand new values can go in a place that logically makes sense, instead
+of being tacked on at the end.
 
 ### Vector
 
