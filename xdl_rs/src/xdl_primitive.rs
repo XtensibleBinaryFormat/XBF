@@ -160,7 +160,7 @@ xdl_primitive_from_impl!(String, String);
 mod test {
     use super::*;
 
-    macro_rules! make_with_metadata_test {
+    macro_rules! with_metadata_test {
         ($xdl_type:tt, $test_num:expr) => {
             let primitive = XdlPrimitive::$xdl_type($test_num);
             let mut writer = Vec::new();
@@ -171,7 +171,7 @@ mod test {
         };
     }
 
-    macro_rules! make_without_metadata_test {
+    macro_rules! without_metadata_test {
         ($xdl_type:tt, $test_num:expr) => {
             let primitive = XdlPrimitive::$xdl_type($test_num);
             let mut writer = Vec::new();
@@ -231,56 +231,56 @@ mod test {
     #[test]
     fn u8_serialize_with_metadata_works() {
         const TEST_NUM: u8 = 42;
-        make_with_metadata_test!(U8, TEST_NUM);
+        with_metadata_test!(U8, TEST_NUM);
     }
     #[test]
     fn u8_serialize_without_metadata_works() {
         const TEST_NUM: u8 = 42;
-        make_without_metadata_test!(U8, TEST_NUM);
+        without_metadata_test!(U8, TEST_NUM);
     }
 
     #[test]
     fn u16_serialize_with_metadata_works() {
         const TEST_NUM: u16 = 420;
-        make_with_metadata_test!(U16, TEST_NUM);
+        with_metadata_test!(U16, TEST_NUM);
     }
     #[test]
     fn u16_serialize_without_metadata_works() {
         const TEST_NUM: u16 = 420;
-        make_without_metadata_test!(U16, TEST_NUM);
+        without_metadata_test!(U16, TEST_NUM);
     }
 
     #[test]
     fn u32_serialize_with_metadata_works() {
         const TEST_NUM: u32 = 100_000;
-        make_with_metadata_test!(U32, TEST_NUM);
+        with_metadata_test!(U32, TEST_NUM);
     }
     #[test]
     fn u32_serialize_without_metadata_works() {
         const TEST_NUM: u32 = 100_000;
-        make_without_metadata_test!(U32, TEST_NUM);
+        without_metadata_test!(U32, TEST_NUM);
     }
 
     #[test]
     fn u64_serialize_with_metadata_works() {
         const TEST_NUM: u64 = 100_000_000;
-        make_with_metadata_test!(U64, TEST_NUM);
+        with_metadata_test!(U64, TEST_NUM);
     }
     #[test]
     fn u64_serialize_without_metadata_works() {
         const TEST_NUM: u64 = 100_000_000;
-        make_without_metadata_test!(U64, TEST_NUM);
+        without_metadata_test!(U64, TEST_NUM);
     }
 
     #[test]
     fn u128_serialize_with_metadata_works() {
         const TEST_NUM: u128 = 18_446_744_073_709_551_617;
-        make_with_metadata_test!(U128, TEST_NUM);
+        with_metadata_test!(U128, TEST_NUM);
     }
     #[test]
     fn u128_serialize_without_metadata_works() {
         const TEST_NUM: u128 = 18_446_744_073_709_551_617;
-        make_without_metadata_test!(U128, TEST_NUM);
+        without_metadata_test!(U128, TEST_NUM);
     }
 
     #[test]
@@ -299,56 +299,56 @@ mod test {
     #[test]
     fn i8_serialize_with_metadata_works() {
         const TEST_NUM: i8 = 42;
-        make_with_metadata_test!(I8, TEST_NUM);
+        with_metadata_test!(I8, TEST_NUM);
     }
     #[test]
     fn i8_serialize_without_metadata_works() {
         const TEST_NUM: i8 = 42;
-        make_without_metadata_test!(I8, TEST_NUM);
+        without_metadata_test!(I8, TEST_NUM);
     }
 
     #[test]
     fn i16_serialize_with_metadata_works() {
         const TEST_NUM: i16 = 420;
-        make_with_metadata_test!(I16, TEST_NUM);
+        with_metadata_test!(I16, TEST_NUM);
     }
     #[test]
     fn i16_serialize_without_metadata_works() {
         const TEST_NUM: i16 = 420;
-        make_without_metadata_test!(I16, TEST_NUM);
+        without_metadata_test!(I16, TEST_NUM);
     }
 
     #[test]
     fn i32_serialize_with_metadata_works() {
         const TEST_NUM: i32 = 100_000;
-        make_with_metadata_test!(I32, TEST_NUM);
+        with_metadata_test!(I32, TEST_NUM);
     }
     #[test]
     fn i32_serialize_without_metadata_works() {
         const TEST_NUM: i32 = 100_000;
-        make_without_metadata_test!(I32, TEST_NUM);
+        without_metadata_test!(I32, TEST_NUM);
     }
 
     #[test]
     fn i64_serialize_with_metadata_works() {
         const TEST_NUM: i64 = 100_000_000;
-        make_with_metadata_test!(I64, TEST_NUM);
+        with_metadata_test!(I64, TEST_NUM);
     }
     #[test]
     fn i64_serialize_without_metadata_works() {
         const TEST_NUM: i64 = 100_000_000;
-        make_without_metadata_test!(I64, TEST_NUM);
+        without_metadata_test!(I64, TEST_NUM);
     }
 
     #[test]
     fn i128_serialize_with_metadata_works() {
         const TEST_NUM: i128 = 18_446_744_073_709_551_617;
-        make_with_metadata_test!(I128, TEST_NUM);
+        with_metadata_test!(I128, TEST_NUM);
     }
     #[test]
     fn i128_serialize_without_metadata_works() {
         const TEST_NUM: i128 = 18_446_744_073_709_551_617;
-        make_without_metadata_test!(I128, TEST_NUM);
+        without_metadata_test!(I128, TEST_NUM);
     }
 
     #[test]
@@ -367,22 +367,22 @@ mod test {
     #[test]
     fn f32_serialize_with_metadata_works() {
         const TEST_NUM: f32 = 69.0;
-        make_with_metadata_test!(F32, TEST_NUM);
+        with_metadata_test!(F32, TEST_NUM);
     }
     #[test]
     fn f32_serialize_without_metadata_works() {
         const TEST_NUM: f32 = 69.0;
-        make_without_metadata_test!(F32, TEST_NUM);
+        without_metadata_test!(F32, TEST_NUM);
     }
 
     #[test]
     fn f64_serialize_with_metadata_works() {
         const TEST_NUM: f64 = 69.0;
-        make_with_metadata_test!(F64, TEST_NUM);
+        with_metadata_test!(F64, TEST_NUM);
     }
     #[test]
     fn f64_serialize_without_metadata_works() {
         const TEST_NUM: f64 = 69.0;
-        make_without_metadata_test!(F64, TEST_NUM);
+        without_metadata_test!(F64, TEST_NUM);
     }
 }
