@@ -4,7 +4,7 @@ mod xdl_vec;
 
 use byteorder::WriteBytesExt;
 use std::io::{self, Read, Write};
-use xdl_primitive::{XdlPrimitive, XdlPrimitiveId, XdlPrimitiveMetadata};
+use xdl_primitive::{XdlPrimitive, XdlPrimitiveMetadata};
 use xdl_struct::{XdlStruct, XdlStructMetadata};
 use xdl_vec::{XdlVec, XdlVecMetadata};
 
@@ -15,8 +15,8 @@ pub enum XdlMetadata {
 }
 
 impl XdlMetadata {
-    pub fn new_primitive_metadata(type_id: XdlPrimitiveId) -> Self {
-        XdlMetadata::Primitive(XdlPrimitiveMetadata(type_id))
+    pub fn new_primitive_metadata(type_id: XdlPrimitiveMetadata) -> Self {
+        XdlMetadata::Primitive(type_id)
     }
 
     pub fn new_vec_metadata(_inner_type: XdlMetadata) -> Self {
@@ -29,7 +29,7 @@ impl XdlMetadata {
 
     pub fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
-            XdlMetadata::Primitive(x) => writer.write_u8(x.0 as u8),
+            XdlMetadata::Primitive(x) => writer.write_u8(*x as u8),
             XdlMetadata::Vec(_x) => todo!(),
             XdlMetadata::Struct(_x) => todo!(),
         }
