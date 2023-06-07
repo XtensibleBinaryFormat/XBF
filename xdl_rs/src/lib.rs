@@ -8,6 +8,23 @@ use xdl_primitive::{XdlPrimitive, XdlPrimitiveMetadata};
 use xdl_struct::{XdlStruct, XdlStructMetadata};
 use xdl_vec::{XdlVec, XdlVecMetadata};
 
+trait Serialize {
+    fn serialize(&self, writer: &mut impl Write) -> io::Result<()>;
+}
+
+trait DeserializeType {
+    fn deserialize(reader: &mut impl Read) -> io::Result<(XdlMetadata, XdlType)>;
+    fn deserialize_with_metadata(
+        metadata: &XdlMetadata,
+        reader: &mut impl Read,
+    ) -> io::Result<XdlType>;
+}
+
+trait DeserializeMetadata {
+    fn deserialize(reader: &mut impl Read) -> io::Result<XdlMetadata>;
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum XdlMetadata {
     Primitive(XdlPrimitiveMetadata),
     Vec(XdlVecMetadata),
@@ -36,15 +53,9 @@ impl XdlMetadata {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum XdlType {
     Primitive(XdlPrimitive),
     Vec(XdlVec),
     Struct(XdlStruct),
-}
-
-impl XdlType {
-    pub fn deserialize_unknown_metadata(_reader: &mut impl Read) -> io::Result<Self> {
-        todo!()
-    }
 }
