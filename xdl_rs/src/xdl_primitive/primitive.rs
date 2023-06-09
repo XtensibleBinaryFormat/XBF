@@ -25,29 +25,6 @@ pub enum XdlPrimitive {
     String(String),
 }
 
-impl From<&XdlPrimitive> for XdlPrimitiveMetadata {
-    fn from(x: &XdlPrimitive) -> Self {
-        match x {
-            XdlPrimitive::Bool(_) => XdlPrimitiveMetadata::Bool,
-            XdlPrimitive::U8(_) => XdlPrimitiveMetadata::U8,
-            XdlPrimitive::U16(_) => XdlPrimitiveMetadata::U16,
-            XdlPrimitive::U32(_) => XdlPrimitiveMetadata::U32,
-            XdlPrimitive::U64(_) => XdlPrimitiveMetadata::U64,
-            XdlPrimitive::U128(_) => XdlPrimitiveMetadata::U128,
-            XdlPrimitive::U256(_) => XdlPrimitiveMetadata::U256,
-            XdlPrimitive::I8(_) => XdlPrimitiveMetadata::I8,
-            XdlPrimitive::I16(_) => XdlPrimitiveMetadata::I16,
-            XdlPrimitive::I32(_) => XdlPrimitiveMetadata::I32,
-            XdlPrimitive::I64(_) => XdlPrimitiveMetadata::I64,
-            XdlPrimitive::I128(_) => XdlPrimitiveMetadata::I128,
-            XdlPrimitive::I256(_) => XdlPrimitiveMetadata::I256,
-            XdlPrimitive::F32(_) => XdlPrimitiveMetadata::F32,
-            XdlPrimitive::F64(_) => XdlPrimitiveMetadata::F64,
-            XdlPrimitive::String(_) => XdlPrimitiveMetadata::String,
-        }
-    }
-}
-
 impl From<XdlPrimitive> for XdlType {
     fn from(value: XdlPrimitive) -> Self {
         XdlType::Primitive(value)
@@ -86,7 +63,7 @@ impl Serialize for XdlPrimitive {
 
 impl DeserializeType for XdlPrimitive {
     fn deserialize(reader: &mut impl Read) -> io::Result<(XdlMetadata, XdlType)> {
-        let type_to_deserialize = XdlMetadata::new_primitive_metadata(reader.read_u8()?.into());
+        let type_to_deserialize = XdlMetadata::Primitive(reader.read_u8()?.into());
         Self::deserialize_with_metadata(&type_to_deserialize, reader)
             .map(|value| (type_to_deserialize, value))
     }

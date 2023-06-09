@@ -32,18 +32,6 @@ pub enum XdlMetadata {
 }
 
 impl XdlMetadata {
-    pub fn new_primitive_metadata(type_id: XdlPrimitiveMetadata) -> Self {
-        XdlMetadata::Primitive(type_id)
-    }
-
-    pub fn new_vec_metadata(_inner_type: XdlMetadata) -> Self {
-        todo!()
-    }
-
-    pub fn new_struct_metadata(_spec: XdlStructMetadata) -> Self {
-        todo!()
-    }
-
     pub fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
             XdlMetadata::Primitive(x) => writer.write_u8(*x as u8),
