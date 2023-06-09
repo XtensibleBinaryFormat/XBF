@@ -1,9 +1,7 @@
+use super::primitive_metadata::XdlPrimitiveMetadata;
+use crate::{DeserializeType, Serialize, XdlMetadata, XdlType};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
-
-use crate::{DeserializeType, Serialize, XdlMetadata, XdlType};
-
-use super::primitive_metadata::XdlPrimitiveMetadata;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum XdlPrimitive {
