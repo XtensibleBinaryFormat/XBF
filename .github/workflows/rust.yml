@@ -2,12 +2,13 @@ name: Rust
 
 on:
   push:
-    branches: [ "main, feature/CI" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
 env:
   CARGO_TERM_COLOR: always
+  SRC_DIR: ./xdl_rs
 
 jobs:
   sanity-checks:
@@ -16,6 +17,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
+    defaults:
+      run:
+        working-directory: $SRC_DIR
 
     steps:
     - uses: actions/checkout@v3
@@ -29,11 +33,14 @@ jobs:
       run: cargo clippy -- -D warnings
   
   debug-tests:
-    name: Regular build and test on ${{ matrix.os }}
+    name: Regular build and test (debug) on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
+    defaults:
+      run:
+        working-directory: $SRC_DIR
         
     steps:
     - uses: actions/checkout@v3
@@ -46,11 +53,14 @@ jobs:
       run: cargo test --verbose
     
   release-tests:
-    name: Regular build and test on ${{ matrix.os }}
+    name: Regular build and test (release) on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
+    defaults:
+      run:
+        working-directory: $SRC_DIR
         
     steps:
     - uses: actions/checkout@v3
@@ -64,11 +74,14 @@ jobs:
   
   
   hygiene-checks:
-    name: Regular build and test on ${{ matrix.os }}
+    name: Hygiene checks (audit, coverage, formatting) on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
+    defaults:
+      run:
+        working-directory: $SRC_DIR
         
     steps:
     - uses: actions/checkout@v3
