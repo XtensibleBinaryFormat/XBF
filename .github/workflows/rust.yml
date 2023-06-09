@@ -1,14 +1,21 @@
 name: Rust
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+# I unfortunately could not figure out how to get the SRC_DR to work in the
+# paths key
 
 env:
   CARGO_TERM_COLOR: always
-  SRC_DIR: ./xdl_rs
+  SRC_DIR: 'xdl_rs'
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "xdl_rs/**"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "xdl_rs/**"
 
 jobs:
   sanity-checks:
