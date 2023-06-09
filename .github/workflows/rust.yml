@@ -80,7 +80,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Setup
-    - run: cargo install cargo-tarpaulin cargo-audit # and install dependencies
+      run: cargo install cargo-tarpaulin cargo-audit # and install dependencies
     - name: Audit
       run: cargo audit
     - name: Coverage
