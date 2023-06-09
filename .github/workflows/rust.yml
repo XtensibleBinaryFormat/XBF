@@ -1,0 +1,85 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  sanity-checks:
+    name: Sanity checks (check, clippy) as expected on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup
+      run: cd xdl_rs # since directory isn't top level
+    
+    # Sanity Checks
+    - name: Check
+      run: cargo check --verbose
+    - name: Clippy
+      run: cargo clippy -- -D warnings
+  
+  debug-tests:
+    name: Regular build and test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup
+      run: cd xdl_rs # since directory isn't top level... do we need this every time?
+      
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+    
+  release-tests:
+    name: Regular build and test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup
+      run: cd xdl_rs # since directory isn't top level... do we need this every time?
+      
+    - name: Build
+      run: cargo build --verbose -r
+    - name: Run tests
+      run: cargo test --verbose -r
+  
+  
+  hygiene-checks:
+    name: Regular build and test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup
+      run: cd xdl_rs # since directory isn't top level... do we need this every time?
+    - run: cargo install cargo-tarpaulin cargo-audit # and install dependencies
+
+    # Extras
+    - name: Audit
+      run: cargo audit
+    - name: Coverage
+      run: cargo tarpaulin --ignore-tests 
+    - name: Format
+      run: cargo fmt -- --check
