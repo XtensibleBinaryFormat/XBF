@@ -21,12 +21,9 @@ jobs:
       run:
         working-directory: $SRC_DIR
 
+    # Sanity Checks
     steps:
     - uses: actions/checkout@v3
-    - name: Setup
-      run: cd xdl_rs # since directory isn't top level
-    
-    # Sanity Checks
     - name: Check
       run: cargo check --verbose
     - name: Clippy
@@ -41,12 +38,10 @@ jobs:
     defaults:
       run:
         working-directory: $SRC_DIR
-        
+
+    # Test in debug mode
     steps:
     - uses: actions/checkout@v3
-    - name: Setup
-      run: cd xdl_rs # since directory isn't top level... do we need this every time?
-      
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -61,12 +56,10 @@ jobs:
     defaults:
       run:
         working-directory: $SRC_DIR
-        
+
+    # Test in release mode        
     steps:
     - uses: actions/checkout@v3
-    - name: Setup
-      run: cd xdl_rs # since directory isn't top level... do we need this every time?
-      
     - name: Build
       run: cargo build --verbose -r
     - name: Run tests
@@ -83,13 +76,11 @@ jobs:
       run:
         working-directory: $SRC_DIR
         
+    # Extras
     steps:
     - uses: actions/checkout@v3
     - name: Setup
-      run: cd xdl_rs # since directory isn't top level... do we need this every time?
     - run: cargo install cargo-tarpaulin cargo-audit # and install dependencies
-
-    # Extras
     - name: Audit
       run: cargo audit
     - name: Coverage
