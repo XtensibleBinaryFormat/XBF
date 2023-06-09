@@ -31,12 +31,22 @@ pub enum XdlMetadata {
     Struct(XdlStructMetadata),
 }
 
-impl XdlMetadata {
-    pub fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+impl Serialize for XdlMetadata {
+    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
-            XdlMetadata::Primitive(x) => writer.write_u8(*x as u8),
-            XdlMetadata::Vec(_x) => todo!(),
+            XdlMetadata::Primitive(x) => x.serialize(writer),
+            XdlMetadata::Vec(x) => x.serialize(writer),
             XdlMetadata::Struct(_x) => todo!(),
+        }
+    }
+}
+
+impl From<&XdlType> for XdlMetadata {
+    fn from(value: &XdlType) -> Self {
+        match value {
+            XdlType::Primitive(x) => XdlMetadata::Primitive(x.into()),
+            XdlType::Vec(_) => todo!(),
+            XdlType::Struct(_) => todo!(),
         }
     }
 }
