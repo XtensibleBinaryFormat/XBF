@@ -262,7 +262,6 @@ fn string_deserialize_works() {
     assert_eq!(primitive, expected_type);
 }
 
-
 #[test]
 fn test_xdl_primitive_from_bool() {
     let value: bool = true;
