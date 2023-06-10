@@ -261,3 +261,27 @@ fn string_deserialize_works() {
     assert_eq!(metadata, expected_metadata);
     assert_eq!(primitive, expected_type);
 }
+
+
+#[test]
+fn test_xdl_primitive_from_bool() {
+    let value: bool = true;
+    let primitive: XdlPrimitive = value.into();
+    assert_eq!(primitive, XdlPrimitive::Bool(true));
+}
+
+#[test]
+fn test_xdl_primitive_from_u8() {
+    let value: u8 = 42;
+    let primitive: XdlPrimitive = value.into();
+    assert_eq!(primitive, XdlPrimitive::U8(42));
+}
+
+// Add similar tests for other primitive types...
+
+#[test]
+fn test_xdl_primitive_from_string() {
+    let value: String = "Hello, World!".to_string();
+    let primitive: XdlPrimitive = value.into();
+    assert_eq!(primitive, XdlPrimitive::String("Hello, World!".to_string()));
+}
