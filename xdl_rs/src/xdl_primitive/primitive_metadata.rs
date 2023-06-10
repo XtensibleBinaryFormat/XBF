@@ -1,10 +1,7 @@
-use std::io::{self, Read, Write};
-
-use byteorder::{ReadBytesExt, WriteBytesExt};
-
-use crate::{DeserializeMetadata, Serialize, XdlMetadata};
-
 use super::XdlPrimitive;
+use crate::{DeserializeMetadata, Serialize, XdlMetadata};
+use byteorder::{ReadBytesExt, WriteBytesExt};
+use std::io::{self, Read, Write};
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u8)]

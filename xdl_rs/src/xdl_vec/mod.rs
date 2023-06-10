@@ -1,31 +1,38 @@
+mod vec;
+mod vec_metadata;
+
+pub use vec_metadata::*;
+
 use crate::{XdlMetadata, XdlType};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct XdlVecMetadata {
+pub struct XdlVec {
     inner_type: Box<XdlMetadata>,
+    elements: Vec<XdlType>,
 }
 
-impl XdlVecMetadata {
-    pub fn new(inner_type: XdlMetadata) -> Self {
+impl XdlVec {
+    pub fn new(
+        inner_type: XdlMetadata,
+        elements: Vec<XdlType>,
+    ) -> Result<Self, ElementsNotHomogenousError> {
+        let all_same_type = elements.iter().all(|x| inner_type == x.into());
+        if all_same_type {
+            Ok(Self {
+                inner_type: Box::new(inner_type),
+                elements,
+            })
+        } else {
+            Err(ElementsNotHomogenousError)
+        }
+    }
+
+    pub fn new_unchecked(inner_type: XdlMetadata, elements: Vec<XdlType>) -> Self {
         Self {
             inner_type: Box::new(inner_type),
+            elements,
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct XdlVec {
-    _inner_type: Box<XdlMetadata>,
-    _elements: Vec<XdlType>,
-}
-
-// impl XdlVec {
-//     pub fn new(inner_type_id: XdlTypeId, elements: Vec<XdlType>) -> Self {
-//         // it IS possible to have a vec of vecs where the inner vecs have different inner types
-//         // unknown whether this is intended by the spec
-//         // leaving it like this would make this code significantly less complicated
-//         assert!(elements.iter().all(|x| x.get_type_id() == inner_type_id));
-//
-//         todo!()
-//     }
-// }
+pub struct ElementsNotHomogenousError;
