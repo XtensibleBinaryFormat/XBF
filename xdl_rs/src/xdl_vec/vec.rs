@@ -2,7 +2,7 @@ use crate::{XdlMetadata, XdlType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct XdlVec {
-    inner_type: Box<XdlMetadata>,
+    pub(super) inner_type: Box<XdlMetadata>,
     elements: Vec<XdlType>,
 }
 
