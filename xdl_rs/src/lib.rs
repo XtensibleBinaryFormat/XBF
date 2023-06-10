@@ -2,7 +2,7 @@ mod xdl_primitive;
 mod xdl_struct;
 mod xdl_vec;
 
-use byteorder::WriteBytesExt;
+//use byteorder::WriteBytesExt;
 use std::io::{self, Read, Write};
 use xdl_primitive::{XdlPrimitive, XdlPrimitiveMetadata};
 use xdl_struct::{XdlStruct, XdlStructMetadata};
