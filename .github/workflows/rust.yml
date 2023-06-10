@@ -1,0 +1,98 @@
+name: Rust
+
+# I unfortunately could not figure out how to get the SRC_DR to work in the
+# paths key
+
+env:
+  CARGO_TERM_COLOR: always
+  SRC_DIR: 'xdl_rs'
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "xdl_rs/**"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "xdl_rs/**"
+
+jobs:
+  sanity-checks:
+    name: Sanity checks (check, clippy) as expected on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+    defaults:
+      run:
+        working-directory: ${{ env.SRC_DIR }}
+
+    # Sanity Checks
+    steps:
+    - uses: actions/checkout@v3
+    - name: Check
+      run: cargo check --verbose
+    - name: Clippy
+      run: cargo clippy -- -D warnings
+  
+  debug-tests:
+    name: Regular build and test (debug) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+    defaults:
+      run:
+        working-directory: ${{ env.SRC_DIR }}
+
+    # Test in debug mode
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+    
+  release-tests:
+    name: Regular build and test (release) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+    defaults:
+      run:
+        working-directory: ${{ env.SRC_DIR }}
+
+    # Test in release mode        
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --verbose -r
+    - name: Run tests
+      run: cargo test --verbose -r
+  
+  
+  hygiene-checks:
+    name: Hygiene checks (audit, coverage, formatting) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+    defaults:
+      run:
+        working-directory: ${{ env.SRC_DIR }}
+        
+    # Extras
+    steps:
+    - uses: actions/checkout@v3
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2.4.0
+    - name: Setup
+      run: cargo install cargo-tarpaulin cargo-audit # and install dependencies
+    - name: Audit
+      run: cargo audit
+    - name: Coverage
+      run: cargo tarpaulin --ignore-tests 
+    - name: Format
+      run: cargo fmt -- --check
