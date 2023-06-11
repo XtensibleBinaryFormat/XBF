@@ -1,7 +1,7 @@
 use super::XdlPrimitive;
-use crate::{DeserializeMetadata, Serialize, XdlMetadata};
-use byteorder::{ReadBytesExt, WriteBytesExt};
-use std::io::{self, Read, Write};
+use crate::Serialize;
+use byteorder::WriteBytesExt;
+use std::io::{self, Write};
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u8)]
@@ -30,37 +30,31 @@ impl Serialize for XdlPrimitiveMetadata {
     }
 }
 
-impl DeserializeMetadata for XdlPrimitiveMetadata {
-    fn deserialize(reader: &mut impl Read) -> io::Result<XdlMetadata> {
-        reader
-            .read_u8()
-            // TODO: could we use try_from instead of panicking?
-            .map(XdlPrimitiveMetadata::from)
-            .map(XdlMetadata::Primitive)
-    }
-}
+impl TryFrom<u8> for XdlPrimitiveMetadata {
+    type Error = io::Error;
 
-// TODO: use try_from instead to remove panicking path?
-impl From<u8> for XdlPrimitiveMetadata {
-    fn from(x: u8) -> Self {
-        match x {
-            0 => Self::Bool,
-            1 => Self::U8,
-            2 => Self::U16,
-            3 => Self::U32,
-            4 => Self::U64,
-            5 => Self::U128,
-            6 => Self::U256,
-            7 => Self::I8,
-            8 => Self::I16,
-            9 => Self::I32,
-            10 => Self::I64,
-            11 => Self::I128,
-            12 => Self::I256,
-            13 => Self::F32,
-            14 => Self::F64,
-            15 => Self::String,
-            _ => panic!("invalid primitive id {x}"),
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Bool),
+            1 => Ok(Self::U8),
+            2 => Ok(Self::U16),
+            3 => Ok(Self::U32),
+            4 => Ok(Self::U64),
+            5 => Ok(Self::U128),
+            6 => Ok(Self::U256),
+            7 => Ok(Self::I8),
+            8 => Ok(Self::I16),
+            9 => Ok(Self::I32),
+            10 => Ok(Self::I64),
+            11 => Ok(Self::I128),
+            12 => Ok(Self::I256),
+            13 => Ok(Self::F32),
+            14 => Ok(Self::F64),
+            15 => Ok(Self::String),
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "invalid primitive metadata",
+            )),
         }
     }
 }
@@ -92,7 +86,7 @@ impl From<&XdlPrimitive> for XdlPrimitiveMetadata {
 mod test {
     use super::*;
 
-    macro_rules! serialize_primitive_metdatada_test {
+    macro_rules! serialize_primitive_metadata_test {
         ($xdl_type:tt, $expected_value:expr) => {
             let metadata = XdlPrimitiveMetadata::$xdl_type;
             let mut writer = Vec::new();
@@ -103,31 +97,32 @@ mod test {
 
     #[test]
     fn metadata_serialize_works() {
-        serialize_primitive_metdatada_test!(Bool, 0);
-        serialize_primitive_metdatada_test!(U8, 1);
-        serialize_primitive_metdatada_test!(U16, 2);
-        serialize_primitive_metdatada_test!(U32, 3);
-        serialize_primitive_metdatada_test!(U64, 4);
-        serialize_primitive_metdatada_test!(U128, 5);
-        serialize_primitive_metdatada_test!(U256, 6);
-        serialize_primitive_metdatada_test!(I8, 7);
-        serialize_primitive_metdatada_test!(I16, 8);
-        serialize_primitive_metdatada_test!(I32, 9);
-        serialize_primitive_metdatada_test!(I64, 10);
-        serialize_primitive_metdatada_test!(I128, 11);
-        serialize_primitive_metdatada_test!(I256, 12);
-        serialize_primitive_metdatada_test!(F32, 13);
-        serialize_primitive_metdatada_test!(F64, 14);
-        serialize_primitive_metdatada_test!(String, 15);
+        serialize_primitive_metadata_test!(Bool, 0);
+        serialize_primitive_metadata_test!(U8, 1);
+        serialize_primitive_metadata_test!(U16, 2);
+        serialize_primitive_metadata_test!(U32, 3);
+        serialize_primitive_metadata_test!(U64, 4);
+        serialize_primitive_metadata_test!(U128, 5);
+        serialize_primitive_metadata_test!(U256, 6);
+        serialize_primitive_metadata_test!(I8, 7);
+        serialize_primitive_metadata_test!(I16, 8);
+        serialize_primitive_metadata_test!(I32, 9);
+        serialize_primitive_metadata_test!(I64, 10);
+        serialize_primitive_metadata_test!(I128, 11);
+        serialize_primitive_metadata_test!(I256, 12);
+        serialize_primitive_metadata_test!(F32, 13);
+        serialize_primitive_metadata_test!(F64, 14);
+        serialize_primitive_metadata_test!(String, 15);
     }
 
+    use crate::{DeserializeMetadata, XdlMetadata};
     use std::io::Cursor;
 
     macro_rules! deserialize_primitive_metadata_test {
         ($xdl_type:tt) => {
             let data = vec![XdlPrimitiveMetadata::$xdl_type as u8];
             let mut reader = Cursor::new(data);
-            let metadata = XdlPrimitiveMetadata::deserialize(&mut reader).unwrap();
+            let metadata = XdlMetadata::deserialize_metadata(&mut reader).unwrap();
             assert_eq!(
                 metadata,
                 XdlMetadata::Primitive(XdlPrimitiveMetadata::$xdl_type)
@@ -156,9 +151,10 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "invalid primitive id 16")]
-    fn metadata_from_u8_panics_for_unknown_id() {
-        let _ = XdlPrimitiveMetadata::from(16);
+    fn metadata_try_from_u8_err_for_unknown_id() {
+        let err = XdlPrimitiveMetadata::try_from(16).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(err.to_string(), "invalid primitive metadata");
     }
 
     #[test]
