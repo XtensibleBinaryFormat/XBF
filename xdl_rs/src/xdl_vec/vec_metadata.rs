@@ -1,9 +1,9 @@
 use super::XdlVec;
-use crate::{xdl_primitive::XdlPrimitiveMetadata, Serialize, XdlMetadata};
+use crate::{xdl_primitive::XdlPrimitiveMetadata, DeserializeMetadata, Serialize, XdlMetadata};
 use byteorder::WriteBytesExt;
 use std::io::{self, Write};
 
-const VEC_METADATA_DISCRIMINANT: u8 = XdlPrimitiveMetadata::String as u8 + 1;
+pub const VEC_METADATA_DISCRIMINANT: u8 = XdlPrimitiveMetadata::String as u8 + 1;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct XdlVecMetadata {
@@ -14,6 +14,12 @@ impl Serialize for XdlVecMetadata {
     fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_u8(VEC_METADATA_DISCRIMINANT)?;
         self.inner_type.serialize(writer)
+    }
+}
+
+impl DeserializeMetadata for XdlVecMetadata {
+    fn deserialize_metadata(reader: &mut impl io::Read) -> io::Result<XdlMetadata> {
+        todo!()
     }
 }
 
