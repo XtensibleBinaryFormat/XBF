@@ -4,7 +4,7 @@ use std::io::{self, Read, Write};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct XdlVec {
-    pub(super) inner_type: Box<XdlMetadata>,
+    pub(crate) inner_type: Box<XdlMetadata>,
     elements: Vec<XdlType>,
 }
 
