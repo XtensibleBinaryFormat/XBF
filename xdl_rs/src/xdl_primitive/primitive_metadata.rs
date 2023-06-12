@@ -1,4 +1,3 @@
-use super::XdlPrimitive;
 use crate::Serialize;
 use byteorder::WriteBytesExt;
 use std::io::{self, Write};
