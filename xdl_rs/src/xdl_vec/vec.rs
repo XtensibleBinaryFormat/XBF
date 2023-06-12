@@ -140,4 +140,43 @@ mod test {
 
         assert_eq!(vec, expected.into());
     }
+
+    #[test]
+    fn deserialize_vec_of_vec_works() {
+        const TEST_NUM: i32 = 42;
+        let mut data = vec![];
+        data.extend_from_slice(&2u16.to_le_bytes());
+        data.extend_from_slice(&2u16.to_le_bytes());
+        data.extend_from_slice(&TEST_NUM.to_le_bytes());
+        data.extend_from_slice(&TEST_NUM.to_le_bytes());
+        data.extend_from_slice(&2u16.to_le_bytes());
+        data.extend_from_slice(&TEST_NUM.to_le_bytes());
+        data.extend_from_slice(&TEST_NUM.to_le_bytes());
+        let mut reader = Cursor::new(data);
+
+        let inner_integer_metadata = XdlPrimitiveMetadata::I32;
+        let inner_vec_metadata = XdlVecMetadata::new(inner_integer_metadata.into());
+
+        let metadata = XdlVecMetadata::new(inner_vec_metadata.clone().into());
+        let expected_inner_vec = XdlVec::new(
+            inner_integer_metadata.clone().into(),
+            vec![
+                XdlType::Primitive(XdlPrimitive::I32(TEST_NUM)),
+                XdlType::Primitive(XdlPrimitive::I32(TEST_NUM)),
+            ],
+        )
+        .unwrap();
+        let expected = XdlVec::new(
+            inner_vec_metadata.into(),
+            vec![
+                expected_inner_vec.clone().into(),
+                expected_inner_vec.clone().into(),
+            ],
+        )
+        .unwrap();
+
+        let vec = XdlType::deserialize_type(&(metadata.into()), &mut reader).unwrap();
+
+        assert_eq!(vec, expected.into());
+    }
 }
