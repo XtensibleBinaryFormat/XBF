@@ -57,4 +57,67 @@ impl XdlVec {
     }
 }
 
+#[derive(Debug)]
 pub struct ElementsNotHomogenousError;
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        xdl_primitive::{XdlPrimitive, XdlPrimitiveMetadata},
+        xdl_vec::XdlVecMetadata,
+    };
+
+    use super::*;
+
+    #[test]
+    fn serialize_vec_primitive_works() {
+        const TEST_NUM: i32 = 42;
+        let vec = XdlVec::new(
+            XdlMetadata::Primitive(XdlPrimitiveMetadata::I32),
+            vec![XdlType::Primitive(XdlPrimitive::I32(TEST_NUM))],
+        )
+        .unwrap();
+        let mut writer = vec![];
+
+        vec.serialize(&mut writer).unwrap();
+
+        let mut expected = vec![];
+        expected.extend_from_slice(&1u16.to_le_bytes());
+        expected.extend_from_slice(&TEST_NUM.to_le_bytes());
+
+        assert_eq!(writer, expected);
+    }
+
+    #[test]
+    fn serialize_vec_of_vec_works() {
+        const TEST_NUM: i32 = 42;
+        let vec_of_two_i32 = XdlVec::new(
+            XdlPrimitiveMetadata::I32.into(),
+            vec![
+                XdlType::Primitive(XdlPrimitive::I32(TEST_NUM)),
+                XdlType::Primitive(XdlPrimitive::I32(TEST_NUM)),
+            ],
+        )
+        .unwrap();
+        let vec_of_i32_metadata: XdlVecMetadata = (&vec_of_two_i32).into();
+        let vec_of_vec_of_i32 = XdlVec::new_unchecked(
+            vec_of_i32_metadata.into(),
+            vec![vec_of_two_i32.clone().into(), vec_of_two_i32.clone().into()],
+        );
+
+        let mut writer = vec![];
+
+        vec_of_vec_of_i32.serialize(&mut writer).unwrap();
+
+        let mut expected = vec![];
+        expected.extend_from_slice(&2u16.to_le_bytes());
+        expected.extend_from_slice(&2u16.to_le_bytes());
+        expected.extend_from_slice(&TEST_NUM.to_le_bytes());
+        expected.extend_from_slice(&TEST_NUM.to_le_bytes());
+        expected.extend_from_slice(&2u16.to_le_bytes());
+        expected.extend_from_slice(&TEST_NUM.to_le_bytes());
+        expected.extend_from_slice(&TEST_NUM.to_le_bytes());
+
+        assert_eq!(writer, expected);
+    }
+}
