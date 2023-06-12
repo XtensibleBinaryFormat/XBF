@@ -62,12 +62,12 @@ pub struct ElementsNotHomogenousError;
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::{
         xdl_primitive::{XdlPrimitive, XdlPrimitiveMetadata},
         xdl_vec::XdlVecMetadata,
     };
-
-    use super::*;
+    use std::io::Cursor;
 
     #[test]
     fn serialize_vec_primitive_works() {
@@ -119,5 +119,25 @@ mod test {
         expected.extend_from_slice(&TEST_NUM.to_le_bytes());
 
         assert_eq!(writer, expected);
+    }
+
+    #[test]
+    fn deserialize_vec_primitive_works() {
+        const TEST_NUM: i32 = 42;
+        let mut data = vec![];
+        data.extend_from_slice(&1u16.to_le_bytes());
+        data.extend_from_slice(&TEST_NUM.to_le_bytes());
+        let mut reader = Cursor::new(data);
+
+        let metadata = XdlVecMetadata::new(XdlPrimitiveMetadata::I32.into());
+        let expected = XdlVec::new(
+            XdlPrimitiveMetadata::I32.into(),
+            vec![XdlType::Primitive(XdlPrimitive::I32(TEST_NUM))],
+        )
+        .unwrap();
+
+        let vec = XdlType::deserialize_type(&(metadata.into()), &mut reader).unwrap();
+
+        assert_eq!(vec, expected.into());
     }
 }

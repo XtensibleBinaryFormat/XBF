@@ -59,7 +59,7 @@ impl DeserializeType for XdlType {
     fn deserialize_type(metadata: &XdlMetadata, reader: &mut impl Read) -> io::Result<XdlType> {
         match metadata {
             XdlMetadata::Primitive(x) => XdlPrimitive::deserialize_primitive(x, reader),
-            XdlMetadata::Vec(_) => todo!(),
+            XdlMetadata::Vec(x) => XdlVec::deserialize_type(&x.inner_type, reader),
             XdlMetadata::Struct(_) => todo!(),
         }
     }

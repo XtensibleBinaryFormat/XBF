@@ -6,7 +6,7 @@ pub const VEC_METADATA_DISCRIMINANT: u8 = XdlPrimitiveMetadata::String as u8 + 1
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct XdlVecMetadata {
-    inner_type: Box<XdlMetadata>,
+    pub(crate) inner_type: Box<XdlMetadata>,
 }
 
 impl XdlVecMetadata {
