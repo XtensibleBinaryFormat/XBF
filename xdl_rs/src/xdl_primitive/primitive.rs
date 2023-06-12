@@ -23,12 +23,6 @@ pub enum XdlPrimitive {
     String(String),
 }
 
-impl From<XdlPrimitive> for XdlType {
-    fn from(value: XdlPrimitive) -> Self {
-        XdlType::Primitive(value)
-    }
-}
-
 impl Serialize for XdlPrimitive {
     fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
@@ -96,32 +90,3 @@ impl XdlPrimitive {
         .map(|x| x.into())
     }
 }
-
-macro_rules! xdl_primitive_from_impl {
-    ($ty:ty, $xdl_type:tt) => {
-        impl From<$ty> for XdlPrimitive {
-            fn from(x: $ty) -> Self {
-                XdlPrimitive::$xdl_type(x)
-            }
-        }
-    };
-}
-
-xdl_primitive_from_impl!(bool, Bool);
-
-xdl_primitive_from_impl!(u8, U8);
-xdl_primitive_from_impl!(u16, U16);
-xdl_primitive_from_impl!(u32, U32);
-xdl_primitive_from_impl!(u64, U64);
-xdl_primitive_from_impl!(u128, U128);
-
-xdl_primitive_from_impl!(i8, I8);
-xdl_primitive_from_impl!(i16, I16);
-xdl_primitive_from_impl!(i32, I32);
-xdl_primitive_from_impl!(i64, I64);
-xdl_primitive_from_impl!(i128, I128);
-
-xdl_primitive_from_impl!(f32, F32);
-xdl_primitive_from_impl!(f64, F64);
-
-xdl_primitive_from_impl!(String, String);
