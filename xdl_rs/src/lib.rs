@@ -1,3 +1,4 @@
+mod conversions;
 mod xdl_primitive;
 mod xdl_struct;
 mod xdl_vec;
@@ -33,16 +34,6 @@ impl Serialize for XdlMetadata {
             XdlMetadata::Primitive(x) => x.serialize(writer),
             XdlMetadata::Vec(x) => x.serialize(writer),
             XdlMetadata::Struct(_x) => todo!(),
-        }
-    }
-}
-
-impl From<&XdlType> for XdlMetadata {
-    fn from(value: &XdlType) -> Self {
-        match value {
-            XdlType::Primitive(x) => XdlMetadata::Primitive(x.into()),
-            XdlType::Vec(x) => XdlMetadata::Vec(x.into()),
-            XdlType::Struct(_x) => todo!(),
         }
     }
 }
