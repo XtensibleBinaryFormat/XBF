@@ -1,3 +1,4 @@
+mod conversions;
 mod xdl_primitive;
 mod xdl_struct;
 mod xdl_vec;
@@ -37,16 +38,6 @@ impl Serialize for XdlMetadata {
     }
 }
 
-impl From<&XdlType> for XdlMetadata {
-    fn from(value: &XdlType) -> Self {
-        match value {
-            XdlType::Primitive(x) => XdlMetadata::Primitive(x.into()),
-            XdlType::Vec(x) => XdlMetadata::Vec(x.into()),
-            XdlType::Struct(_x) => todo!(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum XdlType {
     Primitive(XdlPrimitive),
@@ -68,7 +59,7 @@ impl DeserializeType for XdlType {
     fn deserialize_type(metadata: &XdlMetadata, reader: &mut impl Read) -> io::Result<XdlType> {
         match metadata {
             XdlMetadata::Primitive(x) => XdlPrimitive::deserialize_primitive(x, reader),
-            XdlMetadata::Vec(_) => todo!(),
+            XdlMetadata::Vec(x) => XdlVec::deserialize_type(&x.inner_type, reader),
             XdlMetadata::Struct(_) => todo!(),
         }
     }

@@ -1,4 +1,3 @@
-use super::XdlPrimitive;
 use crate::Serialize;
 use byteorder::WriteBytesExt;
 use std::io::{self, Write};
@@ -55,29 +54,6 @@ impl TryFrom<u8> for XdlPrimitiveMetadata {
                 io::ErrorKind::InvalidData,
                 "invalid primitive metadata",
             )),
-        }
-    }
-}
-
-impl From<&XdlPrimitive> for XdlPrimitiveMetadata {
-    fn from(x: &XdlPrimitive) -> Self {
-        match x {
-            XdlPrimitive::Bool(_) => XdlPrimitiveMetadata::Bool,
-            XdlPrimitive::U8(_) => XdlPrimitiveMetadata::U8,
-            XdlPrimitive::U16(_) => XdlPrimitiveMetadata::U16,
-            XdlPrimitive::U32(_) => XdlPrimitiveMetadata::U32,
-            XdlPrimitive::U64(_) => XdlPrimitiveMetadata::U64,
-            XdlPrimitive::U128(_) => XdlPrimitiveMetadata::U128,
-            XdlPrimitive::U256(_) => XdlPrimitiveMetadata::U256,
-            XdlPrimitive::I8(_) => XdlPrimitiveMetadata::I8,
-            XdlPrimitive::I16(_) => XdlPrimitiveMetadata::I16,
-            XdlPrimitive::I32(_) => XdlPrimitiveMetadata::I32,
-            XdlPrimitive::I64(_) => XdlPrimitiveMetadata::I64,
-            XdlPrimitive::I128(_) => XdlPrimitiveMetadata::I128,
-            XdlPrimitive::I256(_) => XdlPrimitiveMetadata::I256,
-            XdlPrimitive::F32(_) => XdlPrimitiveMetadata::F32,
-            XdlPrimitive::F64(_) => XdlPrimitiveMetadata::F64,
-            XdlPrimitive::String(_) => XdlPrimitiveMetadata::String,
         }
     }
 }
@@ -155,73 +131,5 @@ mod test {
         let err = XdlPrimitiveMetadata::try_from(16).unwrap_err();
         assert_eq!(err.kind(), io::ErrorKind::InvalidData);
         assert_eq!(err.to_string(), "invalid primitive metadata");
-    }
-
-    #[test]
-    fn metadata_from_primitive_works() {
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::Bool(true)),
-            XdlPrimitiveMetadata::Bool
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::U8(1)),
-            XdlPrimitiveMetadata::U8
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::U16(1)),
-            XdlPrimitiveMetadata::U16
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::U32(1)),
-            XdlPrimitiveMetadata::U32
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::U64(1)),
-            XdlPrimitiveMetadata::U64
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::U128(1)),
-            XdlPrimitiveMetadata::U128
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::U256(())),
-            XdlPrimitiveMetadata::U256
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::I8(1)),
-            XdlPrimitiveMetadata::I8
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::I16(1)),
-            XdlPrimitiveMetadata::I16
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::I32(1)),
-            XdlPrimitiveMetadata::I32
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::I64(1)),
-            XdlPrimitiveMetadata::I64
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::I128(1)),
-            XdlPrimitiveMetadata::I128
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::I256(())),
-            XdlPrimitiveMetadata::I256
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::F32(1.0)),
-            XdlPrimitiveMetadata::F32
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::F64(1.0)),
-            XdlPrimitiveMetadata::F64
-        );
-        assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::String("test".to_string())),
-            XdlPrimitiveMetadata::String
-        );
     }
 }
