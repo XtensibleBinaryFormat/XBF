@@ -1,27 +1,24 @@
+mod conversions;
 mod xdl_primitive;
 mod xdl_struct;
 mod xdl_vec;
 
-use byteorder::WriteBytesExt;
+use byteorder::ReadBytesExt;
 use std::io::{self, Read, Write};
 use xdl_primitive::{XdlPrimitive, XdlPrimitiveMetadata};
 use xdl_struct::{XdlStruct, XdlStructMetadata};
-use xdl_vec::{XdlVec, XdlVecMetadata};
+use xdl_vec::{XdlVec, XdlVecMetadata, VEC_METADATA_DISCRIMINANT};
 
 trait Serialize {
     fn serialize(&self, writer: &mut impl Write) -> io::Result<()>;
 }
 
 trait DeserializeType {
-    fn deserialize(reader: &mut impl Read) -> io::Result<(XdlMetadata, XdlType)>;
-    fn deserialize_with_metadata(
-        metadata: &XdlMetadata,
-        reader: &mut impl Read,
-    ) -> io::Result<XdlType>;
+    fn deserialize_type(metadata: &XdlMetadata, reader: &mut impl Read) -> io::Result<XdlType>;
 }
 
 trait DeserializeMetadata {
-    fn deserialize(reader: &mut impl Read) -> io::Result<XdlMetadata>;
+    fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XdlMetadata>;
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -31,23 +28,11 @@ pub enum XdlMetadata {
     Struct(XdlStructMetadata),
 }
 
-impl XdlMetadata {
-    pub fn new_primitive_metadata(type_id: XdlPrimitiveMetadata) -> Self {
-        XdlMetadata::Primitive(type_id)
-    }
-
-    pub fn new_vec_metadata(_inner_type: XdlMetadata) -> Self {
-        todo!()
-    }
-
-    pub fn new_struct_metadata(_spec: XdlStructMetadata) -> Self {
-        todo!()
-    }
-
-    pub fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+impl Serialize for XdlMetadata {
+    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
-            XdlMetadata::Primitive(x) => writer.write_u8(*x as u8),
-            XdlMetadata::Vec(_x) => todo!(),
+            XdlMetadata::Primitive(x) => x.serialize(writer),
+            XdlMetadata::Vec(x) => x.serialize(writer),
             XdlMetadata::Struct(_x) => todo!(),
         }
     }
@@ -58,4 +43,37 @@ pub enum XdlType {
     Primitive(XdlPrimitive),
     Vec(XdlVec),
     Struct(XdlStruct),
+}
+
+impl Serialize for XdlType {
+    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+        match self {
+            XdlType::Primitive(x) => x.serialize(writer),
+            XdlType::Vec(x) => x.serialize(writer),
+            XdlType::Struct(_x) => todo!(),
+        }
+    }
+}
+
+impl DeserializeType for XdlType {
+    fn deserialize_type(metadata: &XdlMetadata, reader: &mut impl Read) -> io::Result<XdlType> {
+        match metadata {
+            XdlMetadata::Primitive(x) => XdlPrimitive::deserialize_primitive(x, reader),
+            XdlMetadata::Vec(x) => XdlVec::deserialize_type(&x.inner_type, reader),
+            XdlMetadata::Struct(_) => todo!(),
+        }
+    }
+}
+
+impl DeserializeMetadata for XdlMetadata {
+    fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XdlMetadata> {
+        let discriminant = reader.read_u8()?;
+        if let Ok(x) = discriminant.try_into() {
+            Ok(XdlMetadata::Primitive(x))
+        } else if discriminant == VEC_METADATA_DISCRIMINANT {
+            Ok(XdlVecMetadata::deserialize_metadata(reader)?)
+        } else {
+            todo!()
+        }
+    }
 }

@@ -12,7 +12,7 @@
 
 ### Vector
 
-A heterogeneous list of values that has a known length.
+A homogenous list of values that has a known length.
 
 ### Struct
 
