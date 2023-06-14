@@ -1,5 +1,5 @@
 use super::primitive_metadata::XdlPrimitiveMetadata;
-use crate::{Serialize, XdlType};
+use crate::{util::write_string, Serialize, XdlType};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
 
@@ -45,10 +45,7 @@ impl Serialize for XdlPrimitive {
             XdlPrimitive::F32(x) => writer.write_f32::<LittleEndian>(*x),
             XdlPrimitive::F64(x) => writer.write_f64::<LittleEndian>(*x),
 
-            XdlPrimitive::String(x) => {
-                writer.write_u16::<LittleEndian>(x.len() as u16)?;
-                writer.write_all(x.as_bytes())
-            }
+            XdlPrimitive::String(x) => write_string(x, writer),
         }
     }
 }

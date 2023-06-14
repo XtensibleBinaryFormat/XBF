@@ -1,4 +1,5 @@
 mod conversions;
+mod util;
 mod xdl_primitive;
 mod xdl_struct;
 mod xdl_vec;
