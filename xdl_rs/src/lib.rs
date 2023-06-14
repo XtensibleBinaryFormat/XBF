@@ -21,7 +21,15 @@ trait DeserializeMetadata {
     fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XdlMetadata>;
 }
 
-#[derive(Debug, Clone, PartialEq)]
+trait IntoBaseMetadata {
+    fn into_base_metadata(self) -> XdlMetadata;
+}
+
+trait IntoBaseType {
+    fn into_base_type(self) -> XdlType;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum XdlMetadata {
     Primitive(XdlPrimitiveMetadata),
     Vec(XdlVecMetadata),

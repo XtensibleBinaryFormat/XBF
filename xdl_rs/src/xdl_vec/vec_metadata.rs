@@ -4,7 +4,7 @@ use std::io::{self, Write};
 
 pub const VEC_METADATA_DISCRIMINANT: u8 = XdlPrimitiveMetadata::String as u8 + 1;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct XdlVecMetadata {
     pub(crate) inner_type: Box<XdlMetadata>,
 }
@@ -31,7 +31,7 @@ impl Serialize for XdlVecMetadata {
 impl DeserializeMetadata for XdlVecMetadata {
     fn deserialize_metadata(reader: &mut impl io::Read) -> io::Result<XdlMetadata> {
         let inner_type = XdlMetadata::deserialize_metadata(reader)?;
-        Ok(XdlMetadata::Vec(XdlVecMetadata::new(inner_type)))
+        Ok(XdlVecMetadata::new(inner_type).into())
     }
 }
 

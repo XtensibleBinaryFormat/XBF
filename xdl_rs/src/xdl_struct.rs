@@ -1,9 +1,9 @@
 use crate::{XdlMetadata, XdlType};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct XdlStructMetadata {
     _name: String,
-    // TODO: should this be a hashmap not a vec?
+    // TODO: add a hashmap for quick lookups
     _fields: Vec<(String, Box<XdlMetadata>)>,
 }
 
