@@ -23,7 +23,7 @@ impl From<&XdlPrimitive> for XdlPrimitiveMetadata {
     }
 }
 
-macro_rules! xdl_primitive_from_impl {
+macro_rules! xdl_primitive_from_native_impl {
     ($ty:ty, $xdl_type:tt) => {
         impl From<$ty> for XdlPrimitive {
             fn from(x: $ty) -> Self {
@@ -33,30 +33,30 @@ macro_rules! xdl_primitive_from_impl {
     };
 }
 
-xdl_primitive_from_impl!(bool, Bool);
+xdl_primitive_from_native_impl!(bool, Bool);
 
-xdl_primitive_from_impl!(u8, U8);
-xdl_primitive_from_impl!(u16, U16);
-xdl_primitive_from_impl!(u32, U32);
-xdl_primitive_from_impl!(u64, U64);
-xdl_primitive_from_impl!(u128, U128);
+xdl_primitive_from_native_impl!(u8, U8);
+xdl_primitive_from_native_impl!(u16, U16);
+xdl_primitive_from_native_impl!(u32, U32);
+xdl_primitive_from_native_impl!(u64, U64);
+xdl_primitive_from_native_impl!(u128, U128);
 
-xdl_primitive_from_impl!(i8, I8);
-xdl_primitive_from_impl!(i16, I16);
-xdl_primitive_from_impl!(i32, I32);
-xdl_primitive_from_impl!(i64, I64);
-xdl_primitive_from_impl!(i128, I128);
+xdl_primitive_from_native_impl!(i8, I8);
+xdl_primitive_from_native_impl!(i16, I16);
+xdl_primitive_from_native_impl!(i32, I32);
+xdl_primitive_from_native_impl!(i64, I64);
+xdl_primitive_from_native_impl!(i128, I128);
 
-xdl_primitive_from_impl!(f32, F32);
-xdl_primitive_from_impl!(f64, F64);
+xdl_primitive_from_native_impl!(f32, F32);
+xdl_primitive_from_native_impl!(f64, F64);
 
-xdl_primitive_from_impl!(String, String);
+xdl_primitive_from_native_impl!(String, String);
 
 #[cfg(test)]
 mod test {
     use super::*;
 
-    macro_rules! from_primitive_test {
+    macro_rules! primitive_from_native_test {
         ($ty:ty, $xdl_type:tt, $test_num:expr) => {
             let value: $ty = $test_num;
             let primitive: XdlPrimitive = value.clone().into();
@@ -66,21 +66,21 @@ mod test {
 
     #[test]
     fn primitive_from_native_works() {
-        from_primitive_test!(bool, Bool, true);
-        from_primitive_test!(bool, Bool, false);
-        from_primitive_test!(u8, U8, 42);
-        from_primitive_test!(u16, U16, 42);
-        from_primitive_test!(u32, U32, 42);
-        from_primitive_test!(u64, U64, 42);
-        from_primitive_test!(u128, U128, 42);
-        from_primitive_test!(i8, I8, 42);
-        from_primitive_test!(i16, I16, 42);
-        from_primitive_test!(i32, I32, 42);
-        from_primitive_test!(i64, I64, 42);
-        from_primitive_test!(i128, I128, 42);
-        from_primitive_test!(f32, F32, 42.0);
-        from_primitive_test!(f64, F64, 42.0);
-        from_primitive_test!(String, String, "Hello World".to_string());
+        primitive_from_native_test!(bool, Bool, true);
+        primitive_from_native_test!(bool, Bool, false);
+        primitive_from_native_test!(u8, U8, 42);
+        primitive_from_native_test!(u16, U16, 42);
+        primitive_from_native_test!(u32, U32, 42);
+        primitive_from_native_test!(u64, U64, 42);
+        primitive_from_native_test!(u128, U128, 42);
+        primitive_from_native_test!(i8, I8, 42);
+        primitive_from_native_test!(i16, I16, 42);
+        primitive_from_native_test!(i32, I32, 42);
+        primitive_from_native_test!(i64, I64, 42);
+        primitive_from_native_test!(i128, I128, 42);
+        primitive_from_native_test!(f32, F32, 42.0);
+        primitive_from_native_test!(f64, F64, 42.0);
+        primitive_from_native_test!(String, String, "Hello World".to_string());
     }
 
     #[test]
