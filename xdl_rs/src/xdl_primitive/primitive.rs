@@ -1,5 +1,8 @@
 use super::primitive_metadata::XdlPrimitiveMetadata;
-use crate::{util::write_string, Serialize, XdlType};
+use crate::{
+    util::{read_string, write_string},
+    Serialize, XdlType,
+};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
 
@@ -75,14 +78,7 @@ impl XdlPrimitive {
             XdlPrimitiveMetadata::I256 => unimplemented!(),
             XdlPrimitiveMetadata::F32 => reader.read_f32::<LittleEndian>().map(XdlPrimitive::F32),
             XdlPrimitiveMetadata::F64 => reader.read_f64::<LittleEndian>().map(XdlPrimitive::F64),
-            XdlPrimitiveMetadata::String => {
-                let len = reader.read_u16::<LittleEndian>()?;
-                let mut buf = vec![0; len as usize];
-                reader.read_exact(&mut buf)?;
-                let string = String::from_utf8(buf)
-                    .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid utf8"))?;
-                Ok(XdlPrimitive::String(string))
-            }
+            XdlPrimitiveMetadata::String => read_string(reader).map(XdlPrimitive::String),
         }
         .map(|x| x.into())
     }
