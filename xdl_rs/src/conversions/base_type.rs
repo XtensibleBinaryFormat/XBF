@@ -2,7 +2,7 @@ use crate::{
     xdl_primitive::{XdlPrimitive, XdlPrimitiveMetadata},
     xdl_struct::{XdlStruct, XdlStructMetadata},
     xdl_vec::{XdlVec, XdlVecMetadata},
-    IntoBaseMetadata, IntoBaseType, XdlMetadata, XdlType,
+    XdlMetadata, XdlMetadataUpcast, XdlType, XdlTypeUpcast,
 };
 
 impl From<XdlPrimitiveMetadata> for XdlMetadata {
@@ -11,9 +11,18 @@ impl From<XdlPrimitiveMetadata> for XdlMetadata {
     }
 }
 
-// TODO: Test this
-impl IntoBaseMetadata for XdlPrimitiveMetadata {
+impl From<&XdlPrimitiveMetadata> for XdlMetadata {
+    fn from(value: &XdlPrimitiveMetadata) -> Self {
+        XdlMetadata::Primitive(*value)
+    }
+}
+
+impl XdlMetadataUpcast for XdlPrimitiveMetadata {
     fn into_base_metadata(self) -> XdlMetadata {
+        self.into()
+    }
+
+    fn to_base_metadata(&self) -> XdlMetadata {
         self.into()
     }
 }
@@ -24,9 +33,18 @@ impl From<XdlVecMetadata> for XdlMetadata {
     }
 }
 
-// TODO: Test this
-impl IntoBaseMetadata for XdlVecMetadata {
+impl From<&XdlVecMetadata> for XdlMetadata {
+    fn from(value: &XdlVecMetadata) -> Self {
+        XdlMetadata::Vec(value.clone())
+    }
+}
+
+impl XdlMetadataUpcast for XdlVecMetadata {
     fn into_base_metadata(self) -> XdlMetadata {
+        self.into()
+    }
+
+    fn to_base_metadata(&self) -> XdlMetadata {
         self.into()
     }
 }
@@ -37,9 +55,18 @@ impl From<XdlStructMetadata> for XdlMetadata {
     }
 }
 
-// TODO: Test this
-impl IntoBaseMetadata for XdlStructMetadata {
+impl From<&XdlStructMetadata> for XdlMetadata {
+    fn from(value: &XdlStructMetadata) -> Self {
+        XdlMetadata::Struct(value.clone())
+    }
+}
+
+impl XdlMetadataUpcast for XdlStructMetadata {
     fn into_base_metadata(self) -> XdlMetadata {
+        self.into()
+    }
+
+    fn to_base_metadata(&self) -> XdlMetadata {
         self.into()
     }
 }
@@ -60,9 +87,18 @@ impl From<XdlPrimitive> for XdlType {
     }
 }
 
-// TODO: Test this
-impl IntoBaseType for XdlPrimitive {
+impl From<&XdlPrimitive> for XdlType {
+    fn from(value: &XdlPrimitive) -> Self {
+        XdlType::Primitive(value.clone())
+    }
+}
+
+impl XdlTypeUpcast for XdlPrimitive {
     fn into_base_type(self) -> XdlType {
+        self.into()
+    }
+
+    fn to_base_type(&self) -> XdlType {
         self.into()
     }
 }
@@ -73,9 +109,18 @@ impl From<XdlVec> for XdlType {
     }
 }
 
-// TODO: Test this
-impl IntoBaseType for XdlVec {
+impl From<&XdlVec> for XdlType {
+    fn from(value: &XdlVec) -> Self {
+        XdlType::Vec(value.clone())
+    }
+}
+
+impl XdlTypeUpcast for XdlVec {
     fn into_base_type(self) -> XdlType {
+        self.into()
+    }
+
+    fn to_base_type(&self) -> XdlType {
         self.into()
     }
 }
@@ -86,9 +131,68 @@ impl From<XdlStruct> for XdlType {
     }
 }
 
+impl From<&XdlStruct> for XdlType {
+    fn from(value: &XdlStruct) -> Self {
+        XdlType::Struct(value.clone())
+    }
+}
+
 // TODO: Test this
-impl IntoBaseType for XdlStruct {
+impl XdlTypeUpcast for XdlStruct {
     fn into_base_type(self) -> XdlType {
         self.into()
+    }
+
+    fn to_base_type(&self) -> XdlType {
+        self.into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_upcast_metadata() {
+        let primitive_metadata = XdlPrimitiveMetadata::I32;
+        let vec_metadata = XdlVecMetadata::new(primitive_metadata.into());
+        // TODO: Test Struct metadata once complete
+
+        assert_eq!(
+            XdlMetadata::Primitive(primitive_metadata),
+            (&primitive_metadata).to_base_metadata()
+        );
+        assert_eq!(
+            XdlMetadata::Primitive(primitive_metadata),
+            primitive_metadata.into_base_metadata()
+        );
+
+        assert_eq!(
+            XdlMetadata::Vec(vec_metadata.clone()),
+            (&vec_metadata).to_base_metadata()
+        );
+        assert_eq!(
+            XdlMetadata::Vec(vec_metadata.clone()),
+            vec_metadata.into_base_metadata()
+        );
+    }
+
+    #[test]
+    fn test_upcast_type() {
+        let primitive_type = XdlPrimitive::I32(69);
+        let vec_type =
+            XdlVec::new(XdlMetadata::Primitive((&primitive_type).into()), vec![]).unwrap();
+        // TODO: Test Struct metadata once complete
+
+        assert_eq!(
+            XdlType::Primitive(primitive_type.clone()),
+            (&primitive_type).to_base_type()
+        );
+        assert_eq!(
+            XdlType::Primitive(primitive_type.clone()),
+            primitive_type.into_base_type()
+        );
+        assert_eq!(XdlType::Vec(vec_type.clone()), (&vec_type).to_base_type());
+        assert_eq!(XdlType::Vec(vec_type.clone()), vec_type.into_base_type());
     }
 }

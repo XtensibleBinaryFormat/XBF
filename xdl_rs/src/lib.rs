@@ -21,12 +21,14 @@ trait DeserializeMetadata {
     fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XdlMetadata>;
 }
 
-trait IntoBaseMetadata {
+trait XdlMetadataUpcast {
     fn into_base_metadata(self) -> XdlMetadata;
+    fn to_base_metadata(&self) -> XdlMetadata;
 }
 
-trait IntoBaseType {
+trait XdlTypeUpcast {
     fn into_base_type(self) -> XdlType;
+    fn to_base_type(&self) -> XdlType;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
