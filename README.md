@@ -8,7 +8,7 @@ dual licensed as below, without any additional terms or conditions.
 
 ## License
 
-&copy; 2023 Contributors of Project GrailNetworking.
+&copy; 2023 Contributors of Project Xtensible Binary Format.
 
 This project is licensed under either of
 

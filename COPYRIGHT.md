@@ -1,6 +1,6 @@
 # Licensing Information
 
-Copyright 2023 Contributors of Project GrailNetworking.
+Copyright 2023 Contributors of Project Xtensible Binary Format.
 
 Copyrights in this project are retained by contributors. No copyright assignment
 is required to contribute to this project.

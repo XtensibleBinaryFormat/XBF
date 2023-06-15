@@ -1,4 +1,4 @@
-# XDL Specification
+# XBF Specification
 
 ## Types
 
@@ -28,7 +28,7 @@ candidates for inclusion include:
 As a counterpart to String, Bytes will not be guaranteed to be valid UTF-8, and
 are simply a list of bytes, analogous to a `Vec<u8>` in Rust.
 
-This could possibly be easier to use than the built-in XDL list type depending
+This could possibly be easier to use than the built-in XBF list type depending
 on how it is implemented? It's also something that likely comes up very often
 when sending data, so direct support for it may make things easier.
 
@@ -101,7 +101,7 @@ likely hold off on finishing it until the Metadata Specification is finished.
 
 ## Metadata Specification
 
-There are two primary ways to request data from an XDL server. The first is to
+There are two primary ways to request data from an XBF server. The first is to
 ask for metadata corresponding to what a given page or server has to offer,
 after which the corresponding data will be sent. The second is to simply ask for
 the data, and no metadata will be sent. It is up to the client to determine
