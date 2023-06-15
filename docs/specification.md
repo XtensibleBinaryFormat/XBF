@@ -101,26 +101,6 @@ likely hold off on finishing it until the Metadata Specification is finished.
 
 ## Metadata Specification
 
-There are two primary ways to request data from an XDL server. The first is to
-ask for metadata corresponding to what a given page or server has to offer,
-after which the corresponding data will be sent. The second is to simply ask for
-the data, and no metadata will be sent. It is up to the client to determine
-whether they have the necessary metadata to receive data from a server.
-
-REQUEST FOR REVIEW:
-
-Should we say anything about what to do when a server has changed what data it
-is sending from a particular path / site? I think following semantic versioning
-might make sense for a given server / site. <https://semver.org/>
-
-As an example, the "landing page" of a server would provide the current semantic
-version of the server's pages, as well as a list of the possible pages and why
-you'd want to go to them (in a human-readable way). It would then be the
-client's responsibility to ask the server for its semantic versioning number,
-and check whether that has changed since the last time it was connected to.
-Based on the rules of semantic versioning, that would determine whether the
-client can or should ask for metadata information before receiving data.
-
 ### Primitives
 
 For primitives, the metadata should be sent as a single byte discriminant value.
