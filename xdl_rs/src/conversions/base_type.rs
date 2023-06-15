@@ -10,66 +10,36 @@ impl From<XdlPrimitiveMetadata> for XdlMetadata {
         XdlMetadata::Primitive(value)
     }
 }
-
 impl From<&XdlPrimitiveMetadata> for XdlMetadata {
     fn from(value: &XdlPrimitiveMetadata) -> Self {
         XdlMetadata::Primitive(*value)
     }
 }
-
-impl XdlMetadataUpcast for XdlPrimitiveMetadata {
-    fn into_base_metadata(self) -> XdlMetadata {
-        self.into()
-    }
-
-    fn to_base_metadata(&self) -> XdlMetadata {
-        self.into()
-    }
-}
+impl XdlMetadataUpcast for XdlPrimitiveMetadata {}
 
 impl From<XdlVecMetadata> for XdlMetadata {
     fn from(value: XdlVecMetadata) -> Self {
         XdlMetadata::Vec(value)
     }
 }
-
 impl From<&XdlVecMetadata> for XdlMetadata {
     fn from(value: &XdlVecMetadata) -> Self {
         XdlMetadata::Vec(value.clone())
     }
 }
-
-impl XdlMetadataUpcast for XdlVecMetadata {
-    fn into_base_metadata(self) -> XdlMetadata {
-        self.into()
-    }
-
-    fn to_base_metadata(&self) -> XdlMetadata {
-        self.into()
-    }
-}
+impl XdlMetadataUpcast for XdlVecMetadata {}
 
 impl From<XdlStructMetadata> for XdlMetadata {
     fn from(value: XdlStructMetadata) -> Self {
         XdlMetadata::Struct(value)
     }
 }
-
 impl From<&XdlStructMetadata> for XdlMetadata {
     fn from(value: &XdlStructMetadata) -> Self {
         XdlMetadata::Struct(value.clone())
     }
 }
-
-impl XdlMetadataUpcast for XdlStructMetadata {
-    fn into_base_metadata(self) -> XdlMetadata {
-        self.into()
-    }
-
-    fn to_base_metadata(&self) -> XdlMetadata {
-        self.into()
-    }
-}
+impl XdlMetadataUpcast for XdlStructMetadata {}
 
 impl From<&XdlType> for XdlMetadata {
     fn from(value: &XdlType) -> Self {
@@ -86,67 +56,37 @@ impl From<XdlPrimitive> for XdlType {
         XdlType::Primitive(value)
     }
 }
-
 impl From<&XdlPrimitive> for XdlType {
     fn from(value: &XdlPrimitive) -> Self {
         XdlType::Primitive(value.clone())
     }
 }
-
-impl XdlTypeUpcast for XdlPrimitive {
-    fn into_base_type(self) -> XdlType {
-        self.into()
-    }
-
-    fn to_base_type(&self) -> XdlType {
-        self.into()
-    }
-}
+impl XdlTypeUpcast for XdlPrimitive {}
 
 impl From<XdlVec> for XdlType {
     fn from(value: XdlVec) -> Self {
         XdlType::Vec(value)
     }
 }
-
 impl From<&XdlVec> for XdlType {
     fn from(value: &XdlVec) -> Self {
         XdlType::Vec(value.clone())
     }
 }
-
-impl XdlTypeUpcast for XdlVec {
-    fn into_base_type(self) -> XdlType {
-        self.into()
-    }
-
-    fn to_base_type(&self) -> XdlType {
-        self.into()
-    }
-}
+impl XdlTypeUpcast for XdlVec {}
 
 impl From<XdlStruct> for XdlType {
     fn from(value: XdlStruct) -> Self {
         XdlType::Struct(value)
     }
 }
-
 impl From<&XdlStruct> for XdlType {
     fn from(value: &XdlStruct) -> Self {
         XdlType::Struct(value.clone())
     }
 }
-
 // TODO: Test this
-impl XdlTypeUpcast for XdlStruct {
-    fn into_base_type(self) -> XdlType {
-        self.into()
-    }
-
-    fn to_base_type(&self) -> XdlType {
-        self.into()
-    }
-}
+impl XdlTypeUpcast for XdlStruct {}
 
 #[cfg(test)]
 mod tests {

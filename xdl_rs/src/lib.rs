@@ -21,14 +21,28 @@ trait DeserializeMetadata {
     fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XdlMetadata>;
 }
 
-trait XdlMetadataUpcast {
-    fn into_base_metadata(self) -> XdlMetadata;
-    fn to_base_metadata(&self) -> XdlMetadata;
+trait XdlMetadataUpcast: Into<XdlMetadata>
+where
+    XdlMetadata: for<'a> From<&'a Self>,
+{
+    fn into_base_metadata(self) -> XdlMetadata {
+        self.into()
+    }
+    fn to_base_metadata(&self) -> XdlMetadata {
+        self.into()
+    }
 }
 
-trait XdlTypeUpcast {
-    fn into_base_type(self) -> XdlType;
-    fn to_base_type(&self) -> XdlType;
+trait XdlTypeUpcast: Into<XdlType>
+where
+    XdlType: for<'a> From<&'a Self>,
+{
+    fn into_base_type(self) -> XdlType {
+        self.into()
+    }
+    fn to_base_type(&self) -> XdlType {
+        self.into()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
