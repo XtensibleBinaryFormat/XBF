@@ -73,8 +73,8 @@ impl XdlPrimitive {
             }
             XdlPrimitiveMetadata::U256 => {
                 let mut data = [0; 4];
-                for i in 0..4 {
-                    data[i] = reader.read_u64::<LittleEndian>()?
+                for i in &mut data {
+                    *i = reader.read_u64::<LittleEndian>()?
                 }
                 Ok(XdlPrimitive::U256(data))
             }
@@ -87,8 +87,8 @@ impl XdlPrimitive {
             }
             XdlPrimitiveMetadata::I256 => {
                 let mut data = [0; 4];
-                for i in 0..4 {
-                    data[i] = reader.read_u64::<LittleEndian>()?
+                for i in &mut data {
+                    *i = reader.read_u64::<LittleEndian>()?
                 }
                 Ok(XdlPrimitive::I256(data))
             }
