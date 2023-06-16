@@ -110,7 +110,7 @@ mod test {
             XdlPrimitiveMetadata::U128
         );
         assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::U256(())),
+            XdlPrimitiveMetadata::from(&XdlPrimitive::U256([1, 2, 3, 4])),
             XdlPrimitiveMetadata::U256
         );
         assert_eq!(
@@ -134,7 +134,7 @@ mod test {
             XdlPrimitiveMetadata::I128
         );
         assert_eq!(
-            XdlPrimitiveMetadata::from(&XdlPrimitive::I256(())),
+            XdlPrimitiveMetadata::from(&XdlPrimitive::I256([1, 2, 3, 4])),
             XdlPrimitiveMetadata::I256
         );
         assert_eq!(
