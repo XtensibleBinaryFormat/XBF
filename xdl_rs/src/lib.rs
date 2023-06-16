@@ -7,7 +7,7 @@ mod xdl_vec;
 use byteorder::ReadBytesExt;
 use std::io::{self, Read, Write};
 use xdl_primitive::{XdlPrimitive, XdlPrimitiveMetadata};
-use xdl_struct::{XdlStruct, XdlStructMetadata};
+use xdl_struct::{XdlStruct, XdlStructMetadata, STRUCT_METADATA_DISCRIMINANT};
 use xdl_vec::{XdlVec, XdlVecMetadata, VEC_METADATA_DISCRIMINANT};
 
 trait Serialize {
@@ -42,7 +42,25 @@ impl Serialize for XdlMetadata {
         match self {
             XdlMetadata::Primitive(x) => x.serialize(writer),
             XdlMetadata::Vec(x) => x.serialize(writer),
-            XdlMetadata::Struct(_x) => todo!(),
+            XdlMetadata::Struct(x) => x.serialize(writer),
+        }
+    }
+}
+
+impl DeserializeMetadata for XdlMetadata {
+    fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XdlMetadata> {
+        let discriminant = reader.read_u8()?;
+        if let Ok(x) = discriminant.try_into() {
+            Ok(XdlMetadata::Primitive(x))
+        } else if discriminant == VEC_METADATA_DISCRIMINANT {
+            Ok(XdlVecMetadata::deserialize_metadata(reader)?)
+        } else if discriminant == STRUCT_METADATA_DISCRIMINANT {
+            Ok(XdlStructMetadata::deserialize_metadata(reader)?)
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Unknown metadata discriminant {}", discriminant),
+            ))
         }
     }
 }
@@ -70,19 +88,6 @@ impl DeserializeType for XdlType {
             XdlMetadata::Primitive(x) => XdlPrimitive::deserialize_primitive(x, reader),
             XdlMetadata::Vec(x) => XdlVec::deserialize_type(&x.inner_type, reader),
             XdlMetadata::Struct(_) => todo!(),
-        }
-    }
-}
-
-impl DeserializeMetadata for XdlMetadata {
-    fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XdlMetadata> {
-        let discriminant = reader.read_u8()?;
-        if let Ok(x) = discriminant.try_into() {
-            Ok(XdlMetadata::Primitive(x))
-        } else if discriminant == VEC_METADATA_DISCRIMINANT {
-            Ok(XdlVecMetadata::deserialize_metadata(reader)?)
-        } else {
-            todo!()
         }
     }
 }
