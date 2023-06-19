@@ -17,6 +17,11 @@ on:
     paths:
       - "xdl_rs/**"
   workflow_dispatch:
+    inputs:
+      reason:
+        required: false
+        description: Reason for triggering this workflow
+        type: string
 
 jobs:
   sanity-checks:
