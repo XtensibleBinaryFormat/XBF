@@ -16,6 +16,7 @@ on:
     branches: [ "main" ]
     paths:
       - "xdl_rs/**"
+  workflow-dispatch:
 
 jobs:
   sanity-checks:
