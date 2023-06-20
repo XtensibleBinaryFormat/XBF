@@ -97,7 +97,7 @@ jobs:
     - name: Setup
       run: cargo install cargo-tarpaulin cargo-audit # and install dependencies
     - name: Audit
-      run: cargo audit
+      run: cargo audit -D warnings
     - name: Coverage
       run: cargo tarpaulin --ignore-tests --fail-under 90 --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
     - name: Format
