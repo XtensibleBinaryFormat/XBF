@@ -1,5 +1,5 @@
-use byteorder::{ReadBytesExt, WriteBytesExt};
-use std::io::{self, Read, Write};
+use byteorder::WriteBytesExt;
+use std::io::{self, Write};
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u8)]

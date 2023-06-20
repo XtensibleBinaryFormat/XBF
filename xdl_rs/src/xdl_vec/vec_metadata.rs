@@ -27,7 +27,7 @@ impl XdlVecMetadata {
 
     pub fn deserialize_vec_metadata(reader: &mut impl Read) -> io::Result<XdlVecMetadata> {
         let inner_type = XdlMetadata::deserialize_base_metadata(reader)?;
-        Ok(XdlVecMetadata::new(inner_type).into())
+        Ok(XdlVecMetadata::new(inner_type))
     }
 }
 
