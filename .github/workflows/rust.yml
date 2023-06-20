@@ -99,7 +99,7 @@ jobs:
     - name: Audit
       run: cargo audit
     - name: Coverage
-      run: cargo tarpaulin --ignore-tests 
+      run: cargo tarpaulin --ignore-tests --fail-under 90
     - name: Format
       run: cargo fmt -- --check
 
