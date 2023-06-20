@@ -85,7 +85,6 @@ impl From<&XdlStruct> for XdlType {
         XdlType::Struct(value.clone())
     }
 }
-// TODO: Test this
 impl XdlTypeUpcast for XdlStruct {}
 
 #[cfg(test)]
@@ -96,7 +95,10 @@ mod tests {
     fn test_upcast_metadata() {
         let primitive_metadata = XdlPrimitiveMetadata::I32;
         let vec_metadata = XdlVecMetadata::new(primitive_metadata.into());
-        // TODO: Test Struct metadata once complete
+        let struct_metadata = XdlStructMetadata::new(
+            "test_struct".to_string(),
+            vec![("field1".to_string(), XdlPrimitiveMetadata::I32.into())],
+        );
 
         assert_eq!(
             XdlMetadata::Primitive(primitive_metadata),
@@ -115,6 +117,15 @@ mod tests {
             XdlMetadata::Vec(vec_metadata.clone()),
             vec_metadata.into_base_metadata()
         );
+
+        assert_eq!(
+            XdlMetadata::Struct(struct_metadata.clone()),
+            (&struct_metadata).to_base_metadata()
+        );
+        assert_eq!(
+            XdlMetadata::Struct(struct_metadata.clone()),
+            struct_metadata.into_base_metadata()
+        )
     }
 
     #[test]
