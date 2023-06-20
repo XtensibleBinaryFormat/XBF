@@ -16,6 +16,12 @@ on:
     branches: [ "main" ]
     paths:
       - "xdl_rs/**"
+  workflow_dispatch:
+    inputs:
+      reason:
+        required: false
+        description: Reason for triggering this workflow
+        type: string
 
 jobs:
   sanity-checks:
@@ -96,3 +102,40 @@ jobs:
       run: cargo tarpaulin --ignore-tests 
     - name: Format
       run: cargo fmt -- --check
+
+
+  nightly-checks:
+    name: Nightly checks (build, test, Miri) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+    defaults:
+      run:
+        working-directory: ${{ env.SRC_DIR }}
+        
+    # Extras
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install nightly and Miri
+      run: |
+        rustup toolchain install nightly --component miri
+        rustup override set nightly
+    - name: Build (release)
+      run: cargo build --verbose -r
+    - name: Run tests (release)
+      run: cargo test --verbose -r
+    - name: Clean previous
+      run: cargo clean
+    - name: Build (debug)
+      run: cargo build --verbose
+    - name: Run tests (debug)
+      run: cargo test --verbose
+    - name: Clean previous for Miri
+      run: |
+        cargo clean
+        cargo miri setup
+    - name: Run Miri
+      run: cargo miri test
