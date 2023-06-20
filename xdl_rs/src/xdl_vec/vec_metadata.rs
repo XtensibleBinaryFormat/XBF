@@ -1,6 +1,6 @@
-use crate::{xdl_primitive::XdlPrimitiveMetadata, DeserializeMetadata, Serialize, XdlMetadata};
+use crate::{xdl_primitive::XdlPrimitiveMetadata, XdlMetadata};
 use byteorder::WriteBytesExt;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 
 pub const VEC_METADATA_DISCRIMINANT: u8 = XdlPrimitiveMetadata::String as u8 + 1;
 
@@ -19,18 +19,14 @@ impl XdlVecMetadata {
     pub fn from_boxed_type(inner_type: Box<XdlMetadata>) -> Self {
         Self { inner_type }
     }
-}
 
-impl Serialize for XdlVecMetadata {
-    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+    pub fn serialize_vec_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_u8(VEC_METADATA_DISCRIMINANT)?;
-        self.inner_type.serialize(writer)
+        self.inner_type.serialize_base_metadata(writer)
     }
-}
 
-impl DeserializeMetadata for XdlVecMetadata {
-    fn deserialize_metadata(reader: &mut impl io::Read) -> io::Result<XdlMetadata> {
-        let inner_type = XdlMetadata::deserialize_metadata(reader)?;
+    pub fn deserialize_vec_metadata(reader: &mut impl Read) -> io::Result<XdlVecMetadata> {
+        let inner_type = XdlMetadata::deserialize_base_metadata(reader)?;
         Ok(XdlVecMetadata::new(inner_type).into())
     }
 }
@@ -49,8 +45,12 @@ mod test {
         ));
         let mut writer = vec![];
 
-        vec_i32_metadata.serialize(&mut writer).unwrap();
-        vec_string_metadata.serialize(&mut writer).unwrap();
+        vec_i32_metadata
+            .serialize_vec_metadata(&mut writer)
+            .unwrap();
+        vec_string_metadata
+            .serialize_vec_metadata(&mut writer)
+            .unwrap();
 
         assert_eq!(
             writer,
@@ -73,8 +73,8 @@ mod test {
         ];
         let mut reader = Cursor::new(data);
 
-        let vec_i32_metadata = XdlMetadata::deserialize_metadata(&mut reader).unwrap();
-        let vec_string_metadata = XdlMetadata::deserialize_metadata(&mut reader).unwrap();
+        let vec_i32_metadata = XdlMetadata::deserialize_base_metadata(&mut reader).unwrap();
+        let vec_string_metadata = XdlMetadata::deserialize_base_metadata(&mut reader).unwrap();
 
         assert_eq!(
             vec_i32_metadata,
@@ -99,7 +99,9 @@ mod test {
         };
         let mut writer = vec![];
 
-        vec_vec_i32_metadata.serialize(&mut writer).unwrap();
+        vec_vec_i32_metadata
+            .serialize_vec_metadata(&mut writer)
+            .unwrap();
 
         assert_eq!(
             writer,
@@ -120,7 +122,7 @@ mod test {
         ];
         let mut reader = Cursor::new(data);
 
-        let vec_vec_i32_metadata = XdlMetadata::deserialize_metadata(&mut reader).unwrap();
+        let vec_vec_i32_metadata = XdlMetadata::deserialize_base_metadata(&mut reader).unwrap();
 
         let expected_metadata = XdlMetadata::Vec(XdlVecMetadata::new(XdlMetadata::Vec(
             XdlVecMetadata::new(XdlMetadata::Primitive(XdlPrimitiveMetadata::I32)),

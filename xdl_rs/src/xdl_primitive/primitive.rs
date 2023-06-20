@@ -1,7 +1,7 @@
 use super::primitive_metadata::XdlPrimitiveMetadata;
 use crate::{
     util::{read_string, write_string},
-    Serialize, XdlType,
+    XdlType,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
@@ -26,8 +26,8 @@ pub enum XdlPrimitive {
     String(String),
 }
 
-impl Serialize for XdlPrimitive {
-    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+impl XdlPrimitive {
+    pub fn serialize_primitive_type(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
             XdlPrimitive::Bool(x) => writer.write_u8(u8::from(*x)),
 
@@ -51,10 +51,8 @@ impl Serialize for XdlPrimitive {
             XdlPrimitive::String(x) => write_string(x, writer),
         }
     }
-}
 
-impl XdlPrimitive {
-    pub fn deserialize_primitive(
+    pub fn deserialize_primitive_type(
         metadata: &XdlPrimitiveMetadata,
         reader: &mut impl Read,
     ) -> io::Result<XdlType> {

@@ -1,6 +1,5 @@
-use crate::Serialize;
-use byteorder::WriteBytesExt;
-use std::io::{self, Write};
+use byteorder::{ReadBytesExt, WriteBytesExt};
+use std::io::{self, Read, Write};
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u8)]
@@ -23,8 +22,8 @@ pub enum XdlPrimitiveMetadata {
     String,
 }
 
-impl Serialize for XdlPrimitiveMetadata {
-    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+impl XdlPrimitiveMetadata {
+    pub fn serialize_primitive_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_u8(*self as u8)
     }
 }
@@ -66,7 +65,7 @@ mod test {
         ($xdl_type:tt, $expected_value:expr) => {
             let metadata = XdlPrimitiveMetadata::$xdl_type;
             let mut writer = Vec::new();
-            metadata.serialize(&mut writer).unwrap();
+            metadata.serialize_primitive_metadata(&mut writer).unwrap();
             assert_eq!(writer, vec![$expected_value]);
         };
     }
@@ -91,14 +90,14 @@ mod test {
         serialize_primitive_metadata_test!(String, 15);
     }
 
-    use crate::{DeserializeMetadata, XdlMetadata};
+    use crate::XdlMetadata;
     use std::io::Cursor;
 
     macro_rules! deserialize_primitive_metadata_test {
         ($xdl_type:tt) => {
             let data = vec![XdlPrimitiveMetadata::$xdl_type as u8];
             let mut reader = Cursor::new(data);
-            let metadata = XdlMetadata::deserialize_metadata(&mut reader).unwrap();
+            let metadata = XdlMetadata::deserialize_base_metadata(&mut reader).unwrap();
             assert_eq!(
                 metadata,
                 XdlMetadata::Primitive(XdlPrimitiveMetadata::$xdl_type)

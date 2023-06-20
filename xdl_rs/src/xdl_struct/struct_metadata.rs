@@ -1,7 +1,7 @@
 use crate::{
     util::{read_string, write_string},
     xdl_vec::VEC_METADATA_DISCRIMINANT,
-    DeserializeMetadata, Serialize, XdlMetadata,
+    XdlMetadata,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
@@ -18,28 +18,24 @@ impl XdlStructMetadata {
     pub fn new(name: String, fields: Vec<(String, XdlMetadata)>) -> Self {
         Self { name, fields }
     }
-}
 
-impl Serialize for XdlStructMetadata {
-    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+    pub fn serialize_struct_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_u8(STRUCT_METADATA_DISCRIMINANT)?;
         write_string(&self.name, writer)?;
         writer.write_u16::<LittleEndian>(self.fields.len() as u16)?;
-        self.fields
-            .iter()
-            .try_for_each(|(name, type_)| write_string(name, writer).and(type_.serialize(writer)))
+        self.fields.iter().try_for_each(|(name, type_)| {
+            write_string(name, writer).and_then(|_| type_.serialize_base_metadata(writer))
+        })
     }
-}
 
-impl DeserializeMetadata for XdlStructMetadata {
-    fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XdlMetadata> {
+    pub fn deserialize_struct_metadata(reader: &mut impl Read) -> io::Result<XdlMetadata> {
         let name = read_string(reader)?;
         let len = reader.read_u16::<LittleEndian>()?;
         let mut fields = Vec::with_capacity(len as usize);
         for _ in 0..len {
             fields.push((
                 read_string(reader)?,
-                XdlMetadata::deserialize_metadata(reader)?,
+                XdlMetadata::deserialize_base_metadata(reader)?,
             ))
         }
         Ok(XdlMetadata::Struct(XdlStructMetadata { name, fields }))
@@ -81,7 +77,7 @@ mod test {
         );
 
         let mut writer = Vec::new();
-        metadata.serialize(&mut writer).unwrap();
+        metadata.serialize_struct_metadata(&mut writer).unwrap();
 
         let mut expected = Vec::new();
         // disciminant
@@ -113,7 +109,7 @@ mod test {
         assert_eq!(expected, writer);
 
         let mut reader = Cursor::new(writer);
-        let deserialized = XdlMetadata::deserialize_metadata(&mut reader).unwrap();
+        let deserialized = XdlMetadata::deserialize_base_metadata(&mut reader).unwrap();
         assert_eq!(XdlMetadata::Struct(metadata), deserialized);
     }
 }
