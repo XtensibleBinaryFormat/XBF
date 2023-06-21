@@ -16,6 +16,8 @@ on:
     branches: [ "main" ]
     paths:
       - "xdl_rs/**"
+  schedule:
+    cron: '00 12 * * *'
   workflow_dispatch:
     inputs:
       reason:
@@ -26,6 +28,7 @@ on:
 jobs:
   sanity-checks:
     name: Sanity checks (check, clippy) as expected on ${{ matrix.os }}
+    needs: [debug-tests,release-tests]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -81,6 +84,7 @@ jobs:
   
   hygiene-checks:
     name: Hygiene checks (audit, coverage, formatting) on ${{ matrix.os }}
+    needs: sanity-checks
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
