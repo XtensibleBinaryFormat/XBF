@@ -1,17 +1,17 @@
-use crate::{XdlMetadata, XdlType};
+use crate::{XbfMetadata, XbfType};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct XdlVec {
-    pub(crate) inner_type: XdlMetadata,
-    elements: Vec<XdlType>,
+pub struct XbfVec {
+    pub(crate) inner_type: XbfMetadata,
+    elements: Vec<XbfType>,
 }
 
-impl XdlVec {
+impl XbfVec {
     pub fn new(
-        inner_type: XdlMetadata,
-        elements: Vec<XdlType>,
+        inner_type: XbfMetadata,
+        elements: Vec<XbfType>,
     ) -> Result<Self, ElementsNotHomogenousError> {
         let all_same_type = elements.iter().all(|x| inner_type == x.into());
         if all_same_type {
@@ -24,7 +24,7 @@ impl XdlVec {
         }
     }
 
-    pub fn new_unchecked(inner_type: XdlMetadata, elements: Vec<XdlType>) -> Self {
+    pub fn new_unchecked(inner_type: XbfMetadata, elements: Vec<XbfType>) -> Self {
         Self {
             inner_type,
             elements,
@@ -39,15 +39,15 @@ impl XdlVec {
     }
 
     pub fn deserialize_vec_type(
-        metadata: &XdlMetadata,
+        metadata: &XbfMetadata,
         reader: &mut impl Read,
-    ) -> io::Result<XdlType> {
+    ) -> io::Result<XbfType> {
         let len = reader.read_u16::<LittleEndian>()? as usize;
         let mut elements = Vec::with_capacity(len);
         for _ in 0..len {
-            elements.push(XdlType::deserialize_base_type(metadata, reader)?);
+            elements.push(XbfType::deserialize_base_type(metadata, reader)?);
         }
-        Ok(XdlType::Vec(XdlVec::new_unchecked(
+        Ok(XbfType::Vec(XbfVec::new_unchecked(
             metadata.clone(),
             elements,
         )))
@@ -61,24 +61,24 @@ pub struct ElementsNotHomogenousError;
 mod test {
     use super::*;
     use crate::{
-        xdl_primitive::{XdlPrimitive, XdlPrimitiveMetadata},
-        xdl_vec::XdlVecMetadata,
+        xbf_primitive::{XbfPrimitive, XbfPrimitiveMetadata},
+        xbf_vec::XbfVecMetadata,
     };
     use std::io::Cursor;
 
     #[test]
     fn vec_new_fails_with_not_homogenous_data() {
-        let data = vec![XdlPrimitive::I32(42).into(), XdlPrimitive::U32(69).into()];
-        let err = XdlVec::new(XdlMetadata::Primitive(XdlPrimitiveMetadata::I32), data).unwrap_err();
+        let data = vec![XbfPrimitive::I32(42).into(), XbfPrimitive::U32(69).into()];
+        let err = XbfVec::new(XbfMetadata::Primitive(XbfPrimitiveMetadata::I32), data).unwrap_err();
         assert_eq!(err, ElementsNotHomogenousError);
     }
 
     #[test]
     fn serialize_vec_primitive_works() {
         const TEST_NUM: i32 = 42;
-        let vec = XdlVec::new(
-            XdlMetadata::Primitive(XdlPrimitiveMetadata::I32),
-            vec![XdlType::Primitive(XdlPrimitive::I32(TEST_NUM))],
+        let vec = XbfVec::new(
+            XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
+            vec![XbfType::Primitive(XbfPrimitive::I32(TEST_NUM))],
         )
         .unwrap();
         let mut writer = vec![];
@@ -95,16 +95,16 @@ mod test {
     #[test]
     fn serialize_vec_of_vec_works() {
         const TEST_NUM: i32 = 42;
-        let vec_of_two_i32 = XdlVec::new(
-            XdlPrimitiveMetadata::I32.into(),
+        let vec_of_two_i32 = XbfVec::new(
+            XbfPrimitiveMetadata::I32.into(),
             vec![
-                XdlType::Primitive(XdlPrimitive::I32(TEST_NUM)),
-                XdlType::Primitive(XdlPrimitive::I32(TEST_NUM)),
+                XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
+                XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
             ],
         )
         .unwrap();
-        let vec_of_i32_metadata: XdlVecMetadata = (&vec_of_two_i32).into();
-        let vec_of_vec_of_i32 = XdlVec::new_unchecked(
+        let vec_of_i32_metadata: XbfVecMetadata = (&vec_of_two_i32).into();
+        let vec_of_vec_of_i32 = XbfVec::new_unchecked(
             vec_of_i32_metadata.into(),
             vec![vec_of_two_i32.clone().into(), vec_of_two_i32.clone().into()],
         );
@@ -133,14 +133,14 @@ mod test {
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
         let mut reader = Cursor::new(data);
 
-        let metadata = XdlVecMetadata::new(XdlPrimitiveMetadata::I32.into());
-        let expected = XdlVec::new(
-            XdlPrimitiveMetadata::I32.into(),
-            vec![XdlType::Primitive(XdlPrimitive::I32(TEST_NUM))],
+        let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
+        let expected = XbfVec::new(
+            XbfPrimitiveMetadata::I32.into(),
+            vec![XbfType::Primitive(XbfPrimitive::I32(TEST_NUM))],
         )
         .unwrap();
 
-        let vec = XdlType::deserialize_base_type(&(metadata.into()), &mut reader).unwrap();
+        let vec = XbfType::deserialize_base_type(&(metadata.into()), &mut reader).unwrap();
 
         assert_eq!(vec, expected.into());
     }
@@ -158,19 +158,19 @@ mod test {
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
         let mut reader = Cursor::new(data);
 
-        let inner_integer_metadata = XdlPrimitiveMetadata::I32;
-        let inner_vec_metadata = XdlVecMetadata::new(inner_integer_metadata.into());
+        let inner_integer_metadata = XbfPrimitiveMetadata::I32;
+        let inner_vec_metadata = XbfVecMetadata::new(inner_integer_metadata.into());
 
-        let metadata = XdlVecMetadata::new(inner_vec_metadata.clone().into());
-        let expected_inner_vec = XdlVec::new(
+        let metadata = XbfVecMetadata::new(inner_vec_metadata.clone().into());
+        let expected_inner_vec = XbfVec::new(
             inner_integer_metadata.clone().into(),
             vec![
-                XdlType::Primitive(XdlPrimitive::I32(TEST_NUM)),
-                XdlType::Primitive(XdlPrimitive::I32(TEST_NUM)),
+                XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
+                XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
             ],
         )
         .unwrap();
-        let expected = XdlVec::new(
+        let expected = XbfVec::new(
             inner_vec_metadata.into(),
             vec![
                 expected_inner_vec.clone().into(),
@@ -179,7 +179,7 @@ mod test {
         )
         .unwrap();
 
-        let vec = XdlType::deserialize_base_type(&(metadata.into()), &mut reader).unwrap();
+        let vec = XbfType::deserialize_base_type(&(metadata.into()), &mut reader).unwrap();
 
         assert_eq!(vec, expected.into());
     }
