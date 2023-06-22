@@ -1,13 +1,13 @@
-use super::primitive_metadata::XdlPrimitiveMetadata;
+use super::primitive_metadata::XbfPrimitiveMetadata;
 use crate::{
     util::{read_string, write_string},
-    Serialize, XdlType,
+    Serialize, XbfType,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum XdlPrimitive {
+pub enum XbfPrimitive {
     Bool(bool),
     U8(u8),
     U16(u16),
@@ -26,59 +26,59 @@ pub enum XdlPrimitive {
     String(String),
 }
 
-impl Serialize for XdlPrimitive {
+impl Serialize for XbfPrimitive {
     fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
-            XdlPrimitive::Bool(x) => writer.write_u8(u8::from(*x)),
+            XbfPrimitive::Bool(x) => writer.write_u8(u8::from(*x)),
 
-            XdlPrimitive::U8(x) => writer.write_u8(*x),
-            XdlPrimitive::U16(x) => writer.write_u16::<LittleEndian>(*x),
-            XdlPrimitive::U32(x) => writer.write_u32::<LittleEndian>(*x),
-            XdlPrimitive::U64(x) => writer.write_u64::<LittleEndian>(*x),
-            XdlPrimitive::U128(x) => writer.write_u128::<LittleEndian>(*x),
-            XdlPrimitive::U256(_) => unimplemented!(),
+            XbfPrimitive::U8(x) => writer.write_u8(*x),
+            XbfPrimitive::U16(x) => writer.write_u16::<LittleEndian>(*x),
+            XbfPrimitive::U32(x) => writer.write_u32::<LittleEndian>(*x),
+            XbfPrimitive::U64(x) => writer.write_u64::<LittleEndian>(*x),
+            XbfPrimitive::U128(x) => writer.write_u128::<LittleEndian>(*x),
+            XbfPrimitive::U256(_) => unimplemented!(),
 
-            XdlPrimitive::I8(x) => writer.write_i8(*x),
-            XdlPrimitive::I16(x) => writer.write_i16::<LittleEndian>(*x),
-            XdlPrimitive::I32(x) => writer.write_i32::<LittleEndian>(*x),
-            XdlPrimitive::I64(x) => writer.write_i64::<LittleEndian>(*x),
-            XdlPrimitive::I128(x) => writer.write_i128::<LittleEndian>(*x),
-            XdlPrimitive::I256(_) => unimplemented!(),
+            XbfPrimitive::I8(x) => writer.write_i8(*x),
+            XbfPrimitive::I16(x) => writer.write_i16::<LittleEndian>(*x),
+            XbfPrimitive::I32(x) => writer.write_i32::<LittleEndian>(*x),
+            XbfPrimitive::I64(x) => writer.write_i64::<LittleEndian>(*x),
+            XbfPrimitive::I128(x) => writer.write_i128::<LittleEndian>(*x),
+            XbfPrimitive::I256(_) => unimplemented!(),
 
-            XdlPrimitive::F32(x) => writer.write_f32::<LittleEndian>(*x),
-            XdlPrimitive::F64(x) => writer.write_f64::<LittleEndian>(*x),
+            XbfPrimitive::F32(x) => writer.write_f32::<LittleEndian>(*x),
+            XbfPrimitive::F64(x) => writer.write_f64::<LittleEndian>(*x),
 
-            XdlPrimitive::String(x) => write_string(x, writer),
+            XbfPrimitive::String(x) => write_string(x, writer),
         }
     }
 }
 
-impl XdlPrimitive {
+impl XbfPrimitive {
     pub fn deserialize_primitive(
-        metadata: &XdlPrimitiveMetadata,
+        metadata: &XbfPrimitiveMetadata,
         reader: &mut impl Read,
-    ) -> io::Result<XdlType> {
+    ) -> io::Result<XbfType> {
         match metadata {
-            XdlPrimitiveMetadata::Bool => reader.read_u8().map(|x| XdlPrimitive::Bool(x != 0)),
-            XdlPrimitiveMetadata::U8 => reader.read_u8().map(XdlPrimitive::U8),
-            XdlPrimitiveMetadata::U16 => reader.read_u16::<LittleEndian>().map(XdlPrimitive::U16),
-            XdlPrimitiveMetadata::U32 => reader.read_u32::<LittleEndian>().map(XdlPrimitive::U32),
-            XdlPrimitiveMetadata::U64 => reader.read_u64::<LittleEndian>().map(XdlPrimitive::U64),
-            XdlPrimitiveMetadata::U128 => {
-                reader.read_u128::<LittleEndian>().map(XdlPrimitive::U128)
+            XbfPrimitiveMetadata::Bool => reader.read_u8().map(|x| XbfPrimitive::Bool(x != 0)),
+            XbfPrimitiveMetadata::U8 => reader.read_u8().map(XbfPrimitive::U8),
+            XbfPrimitiveMetadata::U16 => reader.read_u16::<LittleEndian>().map(XbfPrimitive::U16),
+            XbfPrimitiveMetadata::U32 => reader.read_u32::<LittleEndian>().map(XbfPrimitive::U32),
+            XbfPrimitiveMetadata::U64 => reader.read_u64::<LittleEndian>().map(XbfPrimitive::U64),
+            XbfPrimitiveMetadata::U128 => {
+                reader.read_u128::<LittleEndian>().map(XbfPrimitive::U128)
             }
-            XdlPrimitiveMetadata::U256 => unimplemented!(),
-            XdlPrimitiveMetadata::I8 => reader.read_i8().map(XdlPrimitive::I8),
-            XdlPrimitiveMetadata::I16 => reader.read_i16::<LittleEndian>().map(XdlPrimitive::I16),
-            XdlPrimitiveMetadata::I32 => reader.read_i32::<LittleEndian>().map(XdlPrimitive::I32),
-            XdlPrimitiveMetadata::I64 => reader.read_i64::<LittleEndian>().map(XdlPrimitive::I64),
-            XdlPrimitiveMetadata::I128 => {
-                reader.read_i128::<LittleEndian>().map(XdlPrimitive::I128)
+            XbfPrimitiveMetadata::U256 => unimplemented!(),
+            XbfPrimitiveMetadata::I8 => reader.read_i8().map(XbfPrimitive::I8),
+            XbfPrimitiveMetadata::I16 => reader.read_i16::<LittleEndian>().map(XbfPrimitive::I16),
+            XbfPrimitiveMetadata::I32 => reader.read_i32::<LittleEndian>().map(XbfPrimitive::I32),
+            XbfPrimitiveMetadata::I64 => reader.read_i64::<LittleEndian>().map(XbfPrimitive::I64),
+            XbfPrimitiveMetadata::I128 => {
+                reader.read_i128::<LittleEndian>().map(XbfPrimitive::I128)
             }
-            XdlPrimitiveMetadata::I256 => unimplemented!(),
-            XdlPrimitiveMetadata::F32 => reader.read_f32::<LittleEndian>().map(XdlPrimitive::F32),
-            XdlPrimitiveMetadata::F64 => reader.read_f64::<LittleEndian>().map(XdlPrimitive::F64),
-            XdlPrimitiveMetadata::String => read_string(reader).map(XdlPrimitive::String),
+            XbfPrimitiveMetadata::I256 => unimplemented!(),
+            XbfPrimitiveMetadata::F32 => reader.read_f32::<LittleEndian>().map(XbfPrimitive::F32),
+            XbfPrimitiveMetadata::F64 => reader.read_f64::<LittleEndian>().map(XbfPrimitive::F64),
+            XbfPrimitiveMetadata::String => read_string(reader).map(XbfPrimitive::String),
         }
         .map(|x| x.into())
     }

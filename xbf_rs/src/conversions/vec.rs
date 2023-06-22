@@ -1,7 +1,7 @@
-use crate::xdl_vec::{XdlVec, XdlVecMetadata};
+use crate::xbf_vec::{XbfVec, XbfVecMetadata};
 
-impl From<&XdlVec> for XdlVecMetadata {
-    fn from(value: &XdlVec) -> Self {
+impl From<&XbfVec> for XbfVecMetadata {
+    fn from(value: &XbfVec) -> Self {
         Self::from_boxed_type(value.inner_type.clone())
     }
 }

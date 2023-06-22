@@ -1,14 +1,14 @@
-use crate::{XdlMetadata, XdlType};
+use crate::{XbfMetadata, XbfType};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct XdlStructMetadata {
+pub struct XbfStructMetadata {
     _name: String,
     // TODO: add a hashmap for quick lookups
-    _fields: Vec<(String, Box<XdlMetadata>)>,
+    _fields: Vec<(String, Box<XbfMetadata>)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct XdlStruct {
+pub struct XbfStruct {
     _name: String,
-    _fields: Vec<(String, XdlType)>,
+    _fields: Vec<(String, XbfType)>,
 }
