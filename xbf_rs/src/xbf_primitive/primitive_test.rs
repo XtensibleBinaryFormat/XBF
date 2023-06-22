@@ -148,7 +148,7 @@ fn i128_serde_works() {
 #[test]
 fn i256_serde_works() {
     const TEST_NUM: [u64; 4] = [1, 2, 3, 4];
-    let primitive = XdlPrimitive::I256(TEST_NUM);
+    let primitive = XbfPrimitive::I256(TEST_NUM);
     let mut writer = Vec::new();
 
     primitive.serialize(&mut writer).unwrap();
