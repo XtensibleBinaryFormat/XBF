@@ -4,7 +4,7 @@ use std::io::{self, Write};
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u8)]
-pub enum XdlPrimitiveMetadata {
+pub enum XbfPrimitiveMetadata {
     Bool = 0,
     U8,
     U16,
@@ -23,13 +23,13 @@ pub enum XdlPrimitiveMetadata {
     String,
 }
 
-impl Serialize for XdlPrimitiveMetadata {
+impl Serialize for XbfPrimitiveMetadata {
     fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_u8(*self as u8)
     }
 }
 
-impl TryFrom<u8> for XdlPrimitiveMetadata {
+impl TryFrom<u8> for XbfPrimitiveMetadata {
     type Error = io::Error;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
@@ -63,8 +63,8 @@ mod test {
     use super::*;
 
     macro_rules! serialize_primitive_metadata_test {
-        ($xdl_type:tt, $expected_value:expr) => {
-            let metadata = XdlPrimitiveMetadata::$xdl_type;
+        ($xbf_type:tt, $expected_value:expr) => {
+            let metadata = XbfPrimitiveMetadata::$xbf_type;
             let mut writer = Vec::new();
             metadata.serialize(&mut writer).unwrap();
             assert_eq!(writer, vec![$expected_value]);
@@ -91,17 +91,17 @@ mod test {
         serialize_primitive_metadata_test!(String, 15);
     }
 
-    use crate::{DeserializeMetadata, XdlMetadata};
+    use crate::{DeserializeMetadata, XbfMetadata};
     use std::io::Cursor;
 
     macro_rules! deserialize_primitive_metadata_test {
-        ($xdl_type:tt) => {
-            let data = vec![XdlPrimitiveMetadata::$xdl_type as u8];
+        ($xbf_type:tt) => {
+            let data = vec![XbfPrimitiveMetadata::$xbf_type as u8];
             let mut reader = Cursor::new(data);
-            let metadata = XdlMetadata::deserialize_metadata(&mut reader).unwrap();
+            let metadata = XbfMetadata::deserialize_metadata(&mut reader).unwrap();
             assert_eq!(
                 metadata,
-                XdlMetadata::Primitive(XdlPrimitiveMetadata::$xdl_type)
+                XbfMetadata::Primitive(XbfPrimitiveMetadata::$xbf_type)
             );
         };
     }
@@ -128,7 +128,7 @@ mod test {
 
     #[test]
     fn metadata_try_from_u8_err_for_unknown_id() {
-        let err = XdlPrimitiveMetadata::try_from(16).unwrap_err();
+        let err = XbfPrimitiveMetadata::try_from(16).unwrap_err();
         assert_eq!(err.kind(), io::ErrorKind::InvalidData);
         assert_eq!(err.to_string(), "invalid primitive metadata");
     }
