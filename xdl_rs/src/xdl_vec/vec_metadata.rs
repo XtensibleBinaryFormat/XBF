@@ -1,4 +1,4 @@
-use crate::{xdl_primitive::XdlPrimitiveMetadata, XdlMetadata};
+use crate::{xdl_primitive::XdlPrimitiveMetadata, XdlMetadata, XdlMetadataUpcast, XdlVec};
 use byteorder::WriteBytesExt;
 use std::io::{self, Read, Write};
 
@@ -31,13 +31,21 @@ impl XdlVecMetadata {
     }
 }
 
+impl XdlMetadataUpcast for XdlVecMetadata {}
+
+impl From<&XdlVec> for XdlVecMetadata {
+    fn from(value: &XdlVec) -> Self {
+        Self::new(value.inner_type.clone())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use io::Cursor;
 
     #[test]
-    fn primitive_metadata_serialize_works() {
+    fn primitive_metadata_serde_works() {
         let vec_i32_metadata =
             XdlVecMetadata::new(XdlMetadata::Primitive(XdlPrimitiveMetadata::I32));
         let vec_string_metadata = XdlVecMetadata::from_boxed_type(Box::new(
@@ -61,17 +69,8 @@ mod test {
                 XdlPrimitiveMetadata::String as u8
             ]
         );
-    }
 
-    #[test]
-    fn primitive_metadata_deserialize_works() {
-        let data = vec![
-            VEC_METADATA_DISCRIMINANT,
-            XdlPrimitiveMetadata::I32 as u8,
-            VEC_METADATA_DISCRIMINANT,
-            XdlPrimitiveMetadata::String as u8,
-        ];
-        let mut reader = Cursor::new(data);
+        let mut reader = Cursor::new(writer);
 
         let vec_i32_metadata = XdlMetadata::deserialize_base_metadata(&mut reader).unwrap();
         let vec_string_metadata = XdlMetadata::deserialize_base_metadata(&mut reader).unwrap();
@@ -110,17 +109,9 @@ mod test {
                 VEC_METADATA_DISCRIMINANT,
                 XdlPrimitiveMetadata::I32 as u8
             ]
-        )
-    }
+        );
 
-    #[test]
-    fn nested_vec_metadata_deserialize_works() {
-        let data = vec![
-            VEC_METADATA_DISCRIMINANT,
-            VEC_METADATA_DISCRIMINANT,
-            XdlPrimitiveMetadata::I32 as u8,
-        ];
-        let mut reader = Cursor::new(data);
+        let mut reader = Cursor::new(writer);
 
         let vec_vec_i32_metadata = XdlMetadata::deserialize_base_metadata(&mut reader).unwrap();
 
@@ -129,5 +120,20 @@ mod test {
         )));
 
         assert_eq!(vec_vec_i32_metadata, expected_metadata);
+    }
+
+    #[test]
+    fn upcast_works() {
+        let primitive_metadata = XdlPrimitiveMetadata::I32;
+        let vec_metadata = XdlVecMetadata::new(primitive_metadata.into());
+
+        assert_eq!(
+            XdlMetadata::Vec(vec_metadata.clone()),
+            (&vec_metadata).to_base_metadata()
+        );
+        assert_eq!(
+            XdlMetadata::Vec(vec_metadata.clone()),
+            vec_metadata.into_base_metadata()
+        );
     }
 }

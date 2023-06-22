@@ -1,7 +1,7 @@
 use crate::{
+    base_metadata::XdlMetadataUpcast,
     util::{read_string, write_string},
-    xdl_vec::VEC_METADATA_DISCRIMINANT,
-    XdlMetadata,
+    XdlMetadata, XdlStruct, VEC_METADATA_DISCRIMINANT,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
@@ -11,7 +11,7 @@ pub const STRUCT_METADATA_DISCRIMINANT: u8 = VEC_METADATA_DISCRIMINANT + 1;
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct XdlStructMetadata {
     name: String,
-    fields: Vec<(String, XdlMetadata)>,
+    pub(super) fields: Vec<(String, XdlMetadata)>,
 }
 
 impl XdlStructMetadata {
@@ -42,13 +42,19 @@ impl XdlStructMetadata {
     }
 }
 
+impl XdlMetadataUpcast for XdlStructMetadata {}
+
+impl From<&XdlStruct> for XdlStructMetadata {
+    fn from(value: &XdlStruct) -> Self {
+        value.metadata.clone()
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use std::io::Cursor;
-
-    use crate::{xdl_primitive::XdlPrimitiveMetadata, xdl_vec::XdlVecMetadata};
-
     use super::*;
+    use crate::{xdl_primitive::XdlPrimitiveMetadata, XdlVecMetadata};
+    use std::io::Cursor;
 
     #[test]
     fn metadata_serde_works() {
@@ -111,5 +117,22 @@ mod test {
         let mut reader = Cursor::new(writer);
         let deserialized = XdlMetadata::deserialize_base_metadata(&mut reader).unwrap();
         assert_eq!(XdlMetadata::Struct(metadata), deserialized);
+    }
+
+    #[test]
+    fn upcast_works() {
+        let struct_metadata = XdlStructMetadata::new(
+            "test_struct".to_string(),
+            vec![("field1".to_string(), XdlPrimitiveMetadata::I32.into())],
+        );
+
+        assert_eq!(
+            XdlMetadata::Struct(struct_metadata.clone()),
+            (&struct_metadata).to_base_metadata()
+        );
+        assert_eq!(
+            XdlMetadata::Struct(struct_metadata.clone()),
+            struct_metadata.into_base_metadata()
+        );
     }
 }

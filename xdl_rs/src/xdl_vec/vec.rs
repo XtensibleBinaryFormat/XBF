@@ -1,4 +1,4 @@
-use crate::{XdlMetadata, XdlType};
+use crate::{XdlMetadata, XdlType, XdlTypeUpcast};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
 
@@ -39,30 +39,29 @@ impl XdlVec {
     }
 
     pub fn deserialize_vec_type(
-        metadata: &XdlMetadata,
+        inner_type: &XdlMetadata,
         reader: &mut impl Read,
-    ) -> io::Result<XdlType> {
+    ) -> io::Result<XdlVec> {
         let len = reader.read_u16::<LittleEndian>()? as usize;
         let mut elements = Vec::with_capacity(len);
         for _ in 0..len {
-            elements.push(XdlType::deserialize_base_type(metadata, reader)?);
+            elements.push(XdlType::deserialize_base_type(inner_type, reader)?);
         }
-        Ok(XdlType::Vec(XdlVec::new_unchecked(
-            metadata.clone(),
-            elements,
-        )))
+        Ok(XdlVec::new_unchecked(inner_type.clone(), elements))
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ElementsNotHomogenousError;
 
+impl XdlTypeUpcast for XdlVec {}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::{
         xdl_primitive::{XdlPrimitive, XdlPrimitiveMetadata},
-        xdl_vec::XdlVecMetadata,
+        XdlVecMetadata,
     };
     use std::io::Cursor;
 
@@ -90,6 +89,13 @@ mod test {
         expected.extend_from_slice(&TEST_NUM.to_le_bytes());
 
         assert_eq!(writer, expected);
+
+        let mut reader = Cursor::new(writer);
+
+        let deserialized =
+            XdlVec::deserialize_vec_type(&XdlPrimitiveMetadata::I32.into(), &mut reader).unwrap();
+
+        assert_eq!(vec, deserialized);
     }
 
     #[test]
@@ -131,18 +137,6 @@ mod test {
         let mut data = vec![];
         data.extend_from_slice(&1u16.to_le_bytes());
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
-        let mut reader = Cursor::new(data);
-
-        let metadata = XdlVecMetadata::new(XdlPrimitiveMetadata::I32.into());
-        let expected = XdlVec::new(
-            XdlPrimitiveMetadata::I32.into(),
-            vec![XdlType::Primitive(XdlPrimitive::I32(TEST_NUM))],
-        )
-        .unwrap();
-
-        let vec = XdlType::deserialize_base_type(&(metadata.into()), &mut reader).unwrap();
-
-        assert_eq!(vec, expected.into());
     }
 
     #[test]
