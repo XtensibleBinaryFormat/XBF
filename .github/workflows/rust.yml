@@ -5,17 +5,17 @@ name: Rust
 
 env:
   CARGO_TERM_COLOR: always
-  SRC_DIR: 'xdl_rs'
+  SRC_DIR: 'xbf_rs'
 
 on:
   push:
     branches: [ "main" ]
     paths:
-      - "xdl_rs/**"
+      - "xbf_rs/**"
   pull_request:
     branches: [ "main" ]
     paths:
-      - "xdl_rs/**"
+      - "xbf_rs/**"
   schedule:
     cron: '00 12 * * *'
   workflow_dispatch:
