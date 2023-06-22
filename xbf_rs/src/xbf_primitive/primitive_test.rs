@@ -1,10 +1,10 @@
 use super::*;
-use crate::{DeserializeType, Serialize, XdlMetadata, XdlType};
+use crate::{DeserializeType, Serialize, XbfMetadata, XbfType};
 use std::io::Cursor;
 
 macro_rules! serialize_primitive_test {
-    ($xdl_type:tt, $test_num:expr) => {
-        let primitive = XdlPrimitive::$xdl_type($test_num);
+    ($xbf_type:tt, $test_num:expr) => {
+        let primitive = XbfPrimitive::$xbf_type($test_num);
         let mut writer = Vec::new();
 
         primitive.serialize(&mut writer).unwrap();
@@ -15,26 +15,26 @@ macro_rules! serialize_primitive_test {
 }
 
 macro_rules! deserialize_primitive_test {
-    ($xdl_type:tt, $test_num:expr) => {
+    ($xbf_type:tt, $test_num:expr) => {
         let data = $test_num.to_le_bytes();
         let mut reader = Cursor::new(data);
 
-        let metadata = XdlMetadata::Primitive(XdlPrimitiveMetadata::$xdl_type);
-        let expected = XdlType::Primitive(XdlPrimitive::$xdl_type($test_num));
+        let metadata = XbfMetadata::Primitive(XbfPrimitiveMetadata::$xbf_type);
+        let expected = XbfType::Primitive(XbfPrimitive::$xbf_type($test_num));
 
-        let primitive = XdlType::deserialize_type(&metadata, &mut reader).unwrap();
+        let primitive = XbfType::deserialize_type(&metadata, &mut reader).unwrap();
         assert_eq!(primitive, expected);
     };
 }
 
 #[test]
 fn bool_serialize_works() {
-    let xdl_true = XdlPrimitive::Bool(true);
-    let xdl_false = XdlPrimitive::Bool(false);
+    let xbf_true = XbfPrimitive::Bool(true);
+    let xbf_false = XbfPrimitive::Bool(false);
     let mut writer = Vec::new();
 
-    xdl_true.serialize(&mut writer).unwrap();
-    xdl_false.serialize(&mut writer).unwrap();
+    xbf_true.serialize(&mut writer).unwrap();
+    xbf_false.serialize(&mut writer).unwrap();
 
     assert_eq!(writer, vec![1, 0]);
 }
@@ -43,13 +43,13 @@ fn bool_deserialize_works() {
     let data = vec![1, 0];
     let mut reader = Cursor::new(data);
 
-    let metadata = XdlMetadata::Primitive(XdlPrimitiveMetadata::Bool);
+    let metadata = XbfMetadata::Primitive(XbfPrimitiveMetadata::Bool);
 
-    let true_type = XdlType::deserialize_type(&metadata, &mut reader).unwrap();
-    assert_eq!(true_type, XdlType::Primitive(XdlPrimitive::Bool(true)));
+    let true_type = XbfType::deserialize_type(&metadata, &mut reader).unwrap();
+    assert_eq!(true_type, XbfType::Primitive(XbfPrimitive::Bool(true)));
 
-    let false_type = XdlType::deserialize_type(&metadata, &mut reader).unwrap();
-    assert_eq!(false_type, XdlType::Primitive(XdlPrimitive::Bool(false)));
+    let false_type = XbfType::deserialize_type(&metadata, &mut reader).unwrap();
+    assert_eq!(false_type, XbfType::Primitive(XbfPrimitive::Bool(false)));
 }
 
 #[test]
@@ -90,15 +90,15 @@ fn u128_serde_works() {
 #[test]
 #[should_panic(expected = "not implemented")]
 fn u256_serialize_works() {
-    let dne = XdlPrimitive::U256(());
+    let dne = XbfPrimitive::U256(());
     dne.serialize(&mut Vec::new()).unwrap();
 }
 #[test]
 #[should_panic(expected = "not implemented")]
 fn u256_deserialize_works() {
-    let mut reader = Cursor::new(vec![XdlPrimitiveMetadata::U256 as u8]);
-    XdlType::deserialize_type(
-        &XdlMetadata::Primitive(XdlPrimitiveMetadata::U256),
+    let mut reader = Cursor::new(vec![XbfPrimitiveMetadata::U256 as u8]);
+    XbfType::deserialize_type(
+        &XbfMetadata::Primitive(XbfPrimitiveMetadata::U256),
         &mut reader,
     )
     .unwrap();
@@ -142,15 +142,15 @@ fn i128_serde_works() {
 #[test]
 #[should_panic(expected = "not implemented")]
 fn i256_serialize_works() {
-    let dne = XdlPrimitive::I256(());
+    let dne = XbfPrimitive::I256(());
     dne.serialize(&mut Vec::new()).unwrap();
 }
 #[test]
 #[should_panic(expected = "not implemented")]
 fn i256_deserialize_works() {
-    let mut reader = Cursor::new(vec![XdlPrimitiveMetadata::I256 as u8]);
-    XdlType::deserialize_type(
-        &XdlMetadata::Primitive(XdlPrimitiveMetadata::I256),
+    let mut reader = Cursor::new(vec![XbfPrimitiveMetadata::I256 as u8]);
+    XbfType::deserialize_type(
+        &XbfMetadata::Primitive(XbfPrimitiveMetadata::I256),
         &mut reader,
     )
     .unwrap();
@@ -173,7 +173,7 @@ fn f64_serde_works() {
 #[test]
 fn string_serialize_works() {
     let test_string = "hello world".to_string();
-    let primitive = XdlPrimitive::String(test_string.clone());
+    let primitive = XbfPrimitive::String(test_string.clone());
     let mut writer = vec![];
 
     primitive.serialize(&mut writer).unwrap();
@@ -192,9 +192,9 @@ fn string_deserialize_works() {
 
     let mut reader = Cursor::new(data);
 
-    let metadata = XdlMetadata::Primitive(XdlPrimitiveMetadata::String);
-    let expected = XdlType::Primitive(XdlPrimitive::String(test_string.clone()));
+    let metadata = XbfMetadata::Primitive(XbfPrimitiveMetadata::String);
+    let expected = XbfType::Primitive(XbfPrimitive::String(test_string.clone()));
 
-    let primitive = XdlType::deserialize_type(&metadata, &mut reader).unwrap();
+    let primitive = XbfType::deserialize_type(&metadata, &mut reader).unwrap();
     assert_eq!(primitive, expected);
 }

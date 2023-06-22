@@ -1,4 +1,4 @@
-# XDL Specification
+# XBF Specification
 
 ## Types
 
