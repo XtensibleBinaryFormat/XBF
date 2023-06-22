@@ -1,13 +1,14 @@
-# XDL Specification
+# XBF Specification
 
 ## Types
 
-### 16 Primitives
+### 17 Primitives
 
 - Boolean
 - U8, U16, U32, U64, U128, U256
 - I8, I16, I32, I64, I128, I256
 - F32, F64
+- Bytes
 - String (UTF-8)
 
 ### Vector
@@ -22,15 +23,6 @@ An aggregate type containing a name as well as named fields.
 
 This list can and should be expanded based on any new ideas we have. Possible
 candidates for inclusion include:
-
-#### Bytes
-
-As a counterpart to String, Bytes will not be guaranteed to be valid UTF-8, and
-are simply a list of bytes, analogous to a `Vec<u8>` in Rust.
-
-This could possibly be easier to use than the built-in XDL list type depending
-on how it is implemented? It's also something that likely comes up very often
-when sending data, so direct support for it may make things easier.
 
 #### Char
 
@@ -58,10 +50,6 @@ A boolean should be sent as an unsigned 8-bit integer with the value 0 or 1.
 However, should an arbitrary U8 be sent a value of 0 should be taken to be
 false, and any other value be taken to be true.
 
-REQUEST FOR REVIEW: Should we allow this coercion behavior from a U8 to a
-Boolean, or should exclusively 0 and 1 values be allowed, with an exception /
-panic occurring if neither of those values is found?
-
 ### Integers
 
 All integers should be sent in little endian format, with the least significant
@@ -74,52 +62,32 @@ For signed integers, they should be represented in two's complement format.
 All floating point numbers should be sent as 32 or 64 bit IEEE 754 floating
 point numbers.
 
-### Strings
+### Variable Length Primitives
 
-Strings should be sent as UTF-8 encoded characters. They should first send their
-length as an unsigned 16-bit integer, followed by the corresponding number of
-characters specified by their length.
+Strings should be sent as a sequence of bytes that correspond to UTF-8 code
+points. They should first send their length as an unsigned 16-bit integer (in
+little endian format), followed by the corresponding number of bytes contained
+within the string.
 
-REQUEST FOR REVIEW: Should the chosen length type be changed from a 16-bit
-integer to something else? The most common platforms are using 32-bit integers
-as the default "int" type, so should we choose to conform to that?
+Bytes have the same specification as strings, but with the exception that they
+do not have to be a valid sequence of UTF-8 code points.
 
 ### Vector
 
 Vectors should first include their length as an unsigned 16-bit integer,
 followed by the corresponding number of elements. The type contained within a
 Vector is **not** sent to the client. That information is carried in the
-metadata for a particular request, which will be explained more later in this
-specification.
+metadata.
 
 ### Struct
 
-UNDER CONSTRUCTION
-
-The exact representation for Structs has not been finalized yet, and we will
-likely hold off on finishing it until the Metadata Specification is finished.
+Fields of a Struct are sent in sequence in the order they are listed in the
+Struct's metadata (more on that later). When a struct is serialized it should
+not send any sort of name information (such as its name or field names), how
+many fields it has, nor should it send any type information about its fields.
+That information is carried in the metadata.
 
 ## Metadata Specification
-
-There are two primary ways to request data from an XDL server. The first is to
-ask for metadata corresponding to what a given page or server has to offer,
-after which the corresponding data will be sent. The second is to simply ask for
-the data, and no metadata will be sent. It is up to the client to determine
-whether they have the necessary metadata to receive data from a server.
-
-REQUEST FOR REVIEW:
-
-Should we say anything about what to do when a server has changed what data it
-is sending from a particular path / site? I think following semantic versioning
-might make sense for a given server / site. <https://semver.org/>
-
-As an example, the "landing page" of a server would provide the current semantic
-version of the server's pages, as well as a list of the possible pages and why
-you'd want to go to them (in a human-readable way). It would then be the
-client's responsibility to ask the server for its semantic versioning number,
-and check whether that has changed since the last time it was connected to.
-Based on the rules of semantic versioning, that would determine whether the
-client can or should ask for metadata information before receiving data.
 
 ### Primitives
 
@@ -146,7 +114,12 @@ Here is the current list of primitives and their expected discriminant values:
 | I256      | 12           |
 | F32       | 13           |
 | F64       | 14           |
-| String    | 15           |
+| Bytes     | 15           |
+| String    | 16           |
+
+Strings should always be the final value in the list. The value given to strings
+is used by Vectors and Structs to determine what their discriminant value should
+be.
 
 REQUEST FOR REVIEW:
 
@@ -157,13 +130,28 @@ of being tacked on at the end.
 
 ### Vector
 
-For a vector, a discriminant value should first be sent, similarly to primitives
-(following the same size requirement). Following this, the client should expect
-to receive metadata information for the internal type contained within the
-Vector. This process may continue recursively with nested types of Vectors and
-Structs. Once all the metadata is received, the vector will send its length and
-data as expected.
+A discriminant value should first be sent, similarly to primitives (following
+the same size requirement). This discriminant value should be 1 greater than
+that of the discriminant value for Strings.
+
+Following this, metadata information for the internal type contained within the
+Vector will be sent. This process may continue recursively with nested types of
+Vectors and Structs.
+
+The length of a vector or the data contained within the vector must **not** be
+sent.
 
 ### Struct
 
-UNDER CONSTRUCTION
+A discriminant value should first be sent, similarly to primitives (following
+the same size requirement). This discriminant value should be 1 greater than
+that of the discriminant value for Vectors.
+
+Following this, the name of the Struct should be sent, using the same format as
+primitive strings are sent (U16 length and then the bytes). Next, send the
+number of fields contained within the Struct as a U16, the same as all other
+lengths. Finally, the fields of the Struct should be sent, first the name of the
+field as a String, then immediately after the metadata for the type of the
+field. This process may continue recursively with nested types of Structs or
+Vectors. These name and type pairs will be sent until there are no more fields
+left in the Struct.

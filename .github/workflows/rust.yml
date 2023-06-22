@@ -5,17 +5,23 @@ name: Rust
 
 env:
   CARGO_TERM_COLOR: always
-  SRC_DIR: 'xdl_rs'
+  SRC_DIR: 'xbf_rs'
 
 on:
   push:
     branches: [ "main" ]
     paths:
-      - "xdl_rs/**"
+      - "xbf_rs/**"
   pull_request:
     branches: [ "main" ]
     paths:
-      - "xdl_rs/**"
+      - "xbf_rs/**"
+  workflow_dispatch:
+    inputs:
+      reason:
+        required: false
+        description: Reason for triggering this workflow
+        type: string
 
 jobs:
   sanity-checks:
@@ -91,8 +97,44 @@ jobs:
     - name: Setup
       run: cargo install cargo-tarpaulin cargo-audit # and install dependencies
     - name: Audit
-      run: cargo audit
+      run: cargo audit -D warnings
     - name: Coverage
-      run: cargo tarpaulin --ignore-tests 
+      run: cargo tarpaulin --ignore-tests --fail-under 90 --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
     - name: Format
       run: cargo fmt -- --check
+
+
+  nightly-checks:
+    name: Nightly checks (build, test, Miri) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+    defaults:
+      run:
+        working-directory: ${{ env.SRC_DIR }}
+        
+    # Extras
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install nightly and Miri
+      run: |
+        rustup toolchain install nightly --component miri
+        rustup override set nightly
+    - name: Build (release)
+      run: cargo build --verbose -r
+    - name: Run tests (release)
+      run: cargo test --verbose -r
+    - name: Clean previous
+      run: cargo clean
+    - name: Build (debug)
+      run: cargo build --verbose
+    - name: Run tests (debug)
+      run: cargo test --verbose
+    - name: Clean previous for Miri
+      run: |
+        cargo clean
+        cargo miri setup
+    - name: Run Miri
+      run: cargo miri test

@@ -44,11 +44,11 @@ It would be possible to store the metadata once and just store the data each tim
 ]
 ```
 
-XDL does the same thing as this last example, but does it in binary.
+XBF does the same thing as this last example, but does it in binary.
 
 Example Point:
 
-```xdl
+```xbf
 struct Point {
   double x,y,z;
 }
@@ -68,7 +68,7 @@ F64 1 z         # 4rd field is double named z
 Total metadata is 20 bytes
 
 
-Every XDL request asks for a page with an even number
+Every XBF request asks for a page with an even number
 
 get(page 0) --> give me the data
 get(page 1) --> give me the metadata for 0, then the data
@@ -82,9 +82,9 @@ public:
 
 Because C++ is not easy to analyze, we write a compiler that generates C++ code.
 For CORBA, this was IDL
-XDL is a direct descendent
+XBF is a direct descendent
 
-```xdl
+```xbf
 struct Point {
   f64 x,y,z;
 }
@@ -98,7 +98,7 @@ or
 
 sends data+meta     reads metadata, displays data automatically
 
-```xdl
+```xbf
 struct Student {
   string firstname
   string lastname;
