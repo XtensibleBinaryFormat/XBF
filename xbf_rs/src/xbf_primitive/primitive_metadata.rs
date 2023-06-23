@@ -1,4 +1,3 @@
-use crate::Serialize;
 use byteorder::WriteBytesExt;
 use std::io::{self, Write};
 
@@ -23,8 +22,8 @@ pub enum XbfPrimitiveMetadata {
     String,
 }
 
-impl Serialize for XbfPrimitiveMetadata {
-    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+impl XbfPrimitiveMetadata {
+    pub fn serialize_primitive_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_u8(*self as u8)
     }
 }
@@ -66,7 +65,7 @@ mod test {
         ($xbf_type:tt, $expected_value:expr) => {
             let metadata = XbfPrimitiveMetadata::$xbf_type;
             let mut writer = Vec::new();
-            metadata.serialize(&mut writer).unwrap();
+            metadata.serialize_primitive_metadata(&mut writer).unwrap();
             assert_eq!(writer, vec![$expected_value]);
         };
     }
@@ -91,14 +90,14 @@ mod test {
         serialize_primitive_metadata_test!(String, 15);
     }
 
-    use crate::{DeserializeMetadata, XbfMetadata};
+    use crate::XbfMetadata;
     use std::io::Cursor;
 
     macro_rules! deserialize_primitive_metadata_test {
         ($xbf_type:tt) => {
             let data = vec![XbfPrimitiveMetadata::$xbf_type as u8];
             let mut reader = Cursor::new(data);
-            let metadata = XbfMetadata::deserialize_metadata(&mut reader).unwrap();
+            let metadata = XbfMetadata::deserialize_base_metadata(&mut reader).unwrap();
             assert_eq!(
                 metadata,
                 XbfMetadata::Primitive(XbfPrimitiveMetadata::$xbf_type)

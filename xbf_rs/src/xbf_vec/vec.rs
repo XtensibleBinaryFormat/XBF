@@ -1,32 +1,11 @@
-use crate::{DeserializeType, Serialize, XbfMetadata, XbfType};
+use crate::{XbfMetadata, XbfType};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct XbfVec {
-    pub(crate) inner_type: Box<XbfMetadata>,
+    pub(crate) inner_type: XbfMetadata,
     elements: Vec<XbfType>,
-}
-
-impl Serialize for XbfVec {
-    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
-        writer.write_u16::<LittleEndian>(self.elements.len() as u16)?;
-        self.elements.iter().try_for_each(|e| e.serialize(writer))
-    }
-}
-
-impl DeserializeType for XbfVec {
-    fn deserialize_type(metadata: &XbfMetadata, reader: &mut impl Read) -> io::Result<XbfType> {
-        let len = reader.read_u16::<LittleEndian>()? as usize;
-        let mut elements = Vec::with_capacity(len);
-        for _ in 0..len {
-            elements.push(XbfType::deserialize_type(metadata, reader)?);
-        }
-        Ok(XbfType::Vec(XbfVec::new_unchecked(
-            metadata.clone(),
-            elements,
-        )))
-    }
 }
 
 impl XbfVec {
@@ -37,7 +16,7 @@ impl XbfVec {
         let all_same_type = elements.iter().all(|x| inner_type == x.into());
         if all_same_type {
             Ok(Self {
-                inner_type: Box::new(inner_type),
+                inner_type,
                 elements,
             })
         } else {
@@ -47,9 +26,31 @@ impl XbfVec {
 
     pub fn new_unchecked(inner_type: XbfMetadata, elements: Vec<XbfType>) -> Self {
         Self {
-            inner_type: Box::new(inner_type),
+            inner_type,
             elements,
         }
+    }
+
+    pub fn serialize_vec_type(&self, writer: &mut impl Write) -> io::Result<()> {
+        writer.write_u16::<LittleEndian>(self.elements.len() as u16)?;
+        self.elements
+            .iter()
+            .try_for_each(|e| e.serialize_base_type(writer))
+    }
+
+    pub fn deserialize_vec_type(
+        metadata: &XbfMetadata,
+        reader: &mut impl Read,
+    ) -> io::Result<XbfType> {
+        let len = reader.read_u16::<LittleEndian>()? as usize;
+        let mut elements = Vec::with_capacity(len);
+        for _ in 0..len {
+            elements.push(XbfType::deserialize_base_type(metadata, reader)?);
+        }
+        Ok(XbfType::Vec(XbfVec::new_unchecked(
+            metadata.clone(),
+            elements,
+        )))
     }
 }
 
@@ -82,7 +83,7 @@ mod test {
         .unwrap();
         let mut writer = vec![];
 
-        vec.serialize(&mut writer).unwrap();
+        vec.serialize_vec_type(&mut writer).unwrap();
 
         let mut expected = vec![];
         expected.extend_from_slice(&1u16.to_le_bytes());
@@ -110,7 +111,7 @@ mod test {
 
         let mut writer = vec![];
 
-        vec_of_vec_of_i32.serialize(&mut writer).unwrap();
+        vec_of_vec_of_i32.serialize_vec_type(&mut writer).unwrap();
 
         let mut expected = vec![];
         expected.extend_from_slice(&2u16.to_le_bytes());
@@ -139,7 +140,7 @@ mod test {
         )
         .unwrap();
 
-        let vec = XbfType::deserialize_type(&(metadata.into()), &mut reader).unwrap();
+        let vec = XbfType::deserialize_base_type(&(metadata.into()), &mut reader).unwrap();
 
         assert_eq!(vec, expected.into());
     }
@@ -178,7 +179,7 @@ mod test {
         )
         .unwrap();
 
-        let vec = XbfType::deserialize_type(&(metadata.into()), &mut reader).unwrap();
+        let vec = XbfType::deserialize_base_type(&(metadata.into()), &mut reader).unwrap();
 
         assert_eq!(vec, expected.into());
     }

@@ -10,18 +10,6 @@ use xbf_primitive::{XbfPrimitive, XbfPrimitiveMetadata};
 use xbf_struct::{XbfStruct, XbfStructMetadata, STRUCT_METADATA_DISCRIMINANT};
 use xbf_vec::{XbfVec, XbfVecMetadata, VEC_METADATA_DISCRIMINANT};
 
-trait Serialize {
-    fn serialize(&self, writer: &mut impl Write) -> io::Result<()>;
-}
-
-trait DeserializeType {
-    fn deserialize_type(metadata: &XbfMetadata, reader: &mut impl Read) -> io::Result<XbfType>;
-}
-
-trait DeserializeMetadata {
-    fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XbfMetadata>;
-}
-
 trait XbfMetadataUpcast: Into<XbfMetadata>
 where
     XbfMetadata: for<'a> From<&'a Self>,
@@ -29,6 +17,7 @@ where
     fn into_base_metadata(self) -> XbfMetadata {
         self.into()
     }
+
     fn to_base_metadata(&self) -> XbfMetadata {
         self.into()
     }
@@ -41,6 +30,7 @@ where
     fn into_base_type(self) -> XbfType {
         self.into()
     }
+
     fn to_base_type(&self) -> XbfType {
         self.into()
     }
@@ -53,25 +43,23 @@ pub enum XbfMetadata {
     Struct(XbfStructMetadata),
 }
 
-impl Serialize for XbfMetadata {
-    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+impl XbfMetadata {
+    pub fn serialize_base_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
-            XbfMetadata::Primitive(x) => x.serialize(writer),
-            XbfMetadata::Vec(x) => x.serialize(writer),
-            XbfMetadata::Struct(x) => x.serialize(writer),
+            XbfMetadata::Primitive(x) => x.serialize_primitive_metadata(writer),
+            XbfMetadata::Vec(x) => x.serialize_vec_metadata(writer),
+            XbfMetadata::Struct(x) => x.serialize_struct_metadata(writer),
         }
     }
-}
 
-impl DeserializeMetadata for XbfMetadata {
-    fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XbfMetadata> {
+    pub fn deserialize_base_metadata(reader: &mut impl Read) -> io::Result<XbfMetadata> {
         let discriminant = reader.read_u8()?;
-        if let Ok(x) = discriminant.try_into() {
+        if let Ok(x) = XbfPrimitiveMetadata::try_from(discriminant) {
             Ok(XbfMetadata::Primitive(x))
         } else if discriminant == VEC_METADATA_DISCRIMINANT {
-            Ok(XbfVecMetadata::deserialize_metadata(reader)?)
+            Ok(XbfVecMetadata::deserialize_vec_metadata(reader)?.to_base_metadata())
         } else if discriminant == STRUCT_METADATA_DISCRIMINANT {
-            Ok(XbfStructMetadata::deserialize_metadata(reader)?)
+            Ok(XbfStructMetadata::deserialize_struct_metadata(reader)?)
         } else {
             Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -88,21 +76,22 @@ pub enum XbfType {
     Struct(XbfStruct),
 }
 
-impl Serialize for XbfType {
-    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+impl XbfType {
+    pub fn serialize_base_type(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
-            XbfType::Primitive(x) => x.serialize(writer),
-            XbfType::Vec(x) => x.serialize(writer),
+            XbfType::Primitive(x) => x.serialize_primitive_type(writer),
+            XbfType::Vec(x) => x.serialize_vec_type(writer),
             XbfType::Struct(_x) => todo!(),
         }
     }
-}
 
-impl DeserializeType for XbfType {
-    fn deserialize_type(metadata: &XbfMetadata, reader: &mut impl Read) -> io::Result<XbfType> {
+    pub fn deserialize_base_type(
+        metadata: &XbfMetadata,
+        reader: &mut impl Read,
+    ) -> io::Result<XbfType> {
         match metadata {
-            XbfMetadata::Primitive(x) => XbfPrimitive::deserialize_primitive(x, reader),
-            XbfMetadata::Vec(x) => XbfVec::deserialize_type(&x.inner_type, reader),
+            XbfMetadata::Primitive(x) => XbfPrimitive::deserialize_primitive_type(x, reader),
+            XbfMetadata::Vec(x) => XbfVec::deserialize_vec_type(&x.inner_type, reader),
             XbfMetadata::Struct(_) => todo!(),
         }
     }

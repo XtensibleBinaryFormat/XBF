@@ -1,7 +1,7 @@
 use super::primitive_metadata::XbfPrimitiveMetadata;
 use crate::{
     util::{read_string, write_string},
-    Serialize, XbfType,
+    XbfType,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
@@ -26,8 +26,8 @@ pub enum XbfPrimitive {
     String(String),
 }
 
-impl Serialize for XbfPrimitive {
-    fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+impl XbfPrimitive {
+    pub fn serialize_primitive_type(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
             XbfPrimitive::Bool(x) => writer.write_u8(u8::from(*x)),
 
@@ -55,10 +55,8 @@ impl Serialize for XbfPrimitive {
             XbfPrimitive::String(x) => write_string(x, writer),
         }
     }
-}
 
-impl XbfPrimitive {
-    pub fn deserialize_primitive(
+    pub fn deserialize_primitive_type(
         metadata: &XbfPrimitiveMetadata,
         reader: &mut impl Read,
     ) -> io::Result<XbfType> {
