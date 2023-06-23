@@ -1,5 +1,4 @@
-use super::XbfStructMetadata;
-use crate::{XbfMetadata, XbfType, XbfTypeUpcast};
+use crate::{XbfMetadata, XbfStructMetadata, XbfType, XbfTypeUpcast};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct XbfStruct {
@@ -39,13 +38,9 @@ impl XbfTypeUpcast for XbfStruct {}
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    use crate::{XbfMetadataUpcast, XbfPrimitive, XbfPrimitiveMetadata, XbfVec, XbfVecMetadata};
     use std::io::Cursor;
-
-    use super::XbfStruct;
-    use crate::{
-        XbfMetadata, XbfMetadataUpcast, XbfPrimitive, XbfPrimitiveMetadata, XbfStructMetadata,
-        XbfType, XbfTypeUpcast, XbfVec, XbfVecMetadata,
-    };
 
     #[test]
     fn test_struct_serde_works() {

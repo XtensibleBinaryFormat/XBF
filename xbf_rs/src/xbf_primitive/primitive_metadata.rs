@@ -86,6 +86,8 @@ impl From<&XbfPrimitive> for XbfPrimitiveMetadata {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::XbfMetadata;
+    use std::io::Cursor;
 
     macro_rules! serialize_primitive_metadata_test {
         ($xbf_type:tt, $expected_value:expr) => {
@@ -115,9 +117,6 @@ mod test {
         serialize_primitive_metadata_test!(F64, 14);
         serialize_primitive_metadata_test!(String, 15);
     }
-
-    use crate::XbfMetadata;
-    use std::io::Cursor;
 
     macro_rules! deserialize_primitive_metadata_test {
         ($xbf_type:tt) => {

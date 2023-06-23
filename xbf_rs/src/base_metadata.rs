@@ -1,7 +1,9 @@
-use crate::xbf_primitive::XbfPrimitiveMetadata;
-use crate::xbf_struct::{XbfStructMetadata, STRUCT_METADATA_DISCRIMINANT};
-use crate::xbf_vec::{XbfVecMetadata, VEC_METADATA_DISCRIMINANT};
-use crate::XbfType;
+use crate::{
+    xbf_primitive::XbfPrimitiveMetadata,
+    xbf_struct::{XbfStructMetadata, STRUCT_METADATA_DISCRIMINANT},
+    xbf_vec::{XbfVecMetadata, VEC_METADATA_DISCRIMINANT},
+    XbfType,
+};
 use byteorder::ReadBytesExt;
 use std::io::{self, Read, Write};
 

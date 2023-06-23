@@ -1,7 +1,6 @@
-use super::primitive_metadata::XbfPrimitiveMetadata;
 use crate::{
     util::{read_string, write_string},
-    XbfTypeUpcast,
+    XbfPrimitiveMetadata, XbfTypeUpcast,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
@@ -39,7 +38,6 @@ impl XbfPrimitive {
             XbfPrimitive::U256(x) => x
                 .iter()
                 .try_for_each(|x| writer.write_u64::<LittleEndian>(*x)),
-
             XbfPrimitive::I8(x) => writer.write_i8(*x),
             XbfPrimitive::I16(x) => writer.write_i16::<LittleEndian>(*x),
             XbfPrimitive::I32(x) => writer.write_i32::<LittleEndian>(*x),
@@ -48,19 +46,17 @@ impl XbfPrimitive {
             XbfPrimitive::I256(x) => x
                 .iter()
                 .try_for_each(|x| writer.write_u64::<LittleEndian>(*x)),
-
             XbfPrimitive::F32(x) => writer.write_f32::<LittleEndian>(*x),
             XbfPrimitive::F64(x) => writer.write_f64::<LittleEndian>(*x),
-
             XbfPrimitive::String(x) => write_string(x, writer),
         }
     }
 
     pub fn deserialize_primitive_type(
-        metadata: &XbfPrimitiveMetadata,
+        primitive_metadata: &XbfPrimitiveMetadata,
         reader: &mut impl Read,
     ) -> io::Result<XbfPrimitive> {
-        match metadata {
+        match primitive_metadata {
             XbfPrimitiveMetadata::Bool => reader.read_u8().map(|x| XbfPrimitive::Bool(x != 0)),
             XbfPrimitiveMetadata::U8 => reader.read_u8().map(XbfPrimitive::U8),
             XbfPrimitiveMetadata::U16 => reader.read_u16::<LittleEndian>().map(XbfPrimitive::U16),
@@ -110,22 +106,18 @@ macro_rules! xbf_primitive_from_native_impl {
 }
 
 xbf_primitive_from_native_impl!(bool, Bool);
-
 xbf_primitive_from_native_impl!(u8, U8);
 xbf_primitive_from_native_impl!(u16, U16);
 xbf_primitive_from_native_impl!(u32, U32);
 xbf_primitive_from_native_impl!(u64, U64);
 xbf_primitive_from_native_impl!(u128, U128);
-
 xbf_primitive_from_native_impl!(i8, I8);
 xbf_primitive_from_native_impl!(i16, I16);
 xbf_primitive_from_native_impl!(i32, I32);
 xbf_primitive_from_native_impl!(i64, I64);
 xbf_primitive_from_native_impl!(i128, I128);
-
 xbf_primitive_from_native_impl!(f32, F32);
 xbf_primitive_from_native_impl!(f64, F64);
-
 xbf_primitive_from_native_impl!(String, String);
 
 #[cfg(test)]
