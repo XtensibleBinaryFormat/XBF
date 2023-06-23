@@ -306,71 +306,32 @@ mod test {
         primitive_from_native_test!(String, String, "Hello World".to_string());
     }
 
+    macro_rules! primitive_metadata_from_primitive_test {
+        ($xbf_type:tt, $test_val:expr) => {
+            assert_eq!(
+                XbfPrimitiveMetadata::from(&XbfPrimitive::$xbf_type($test_val)),
+                XbfPrimitiveMetadata::$xbf_type
+            )
+        };
+    }
+
     #[test]
     fn primitve_metadata_from_primitive_works() {
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::Bool(true)),
-            XbfPrimitiveMetadata::Bool
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U8(1)),
-            XbfPrimitiveMetadata::U8
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U16(1)),
-            XbfPrimitiveMetadata::U16
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U32(1)),
-            XbfPrimitiveMetadata::U32
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U64(1)),
-            XbfPrimitiveMetadata::U64
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U128(1)),
-            XbfPrimitiveMetadata::U128
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U256([1, 2, 3, 4])),
-            XbfPrimitiveMetadata::U256
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I8(1)),
-            XbfPrimitiveMetadata::I8
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I16(1)),
-            XbfPrimitiveMetadata::I16
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I32(1)),
-            XbfPrimitiveMetadata::I32
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I64(1)),
-            XbfPrimitiveMetadata::I64
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I128(1)),
-            XbfPrimitiveMetadata::I128
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I256([1, 2, 3, 4])),
-            XbfPrimitiveMetadata::I256
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::F32(1.0)),
-            XbfPrimitiveMetadata::F32
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::F64(1.0)),
-            XbfPrimitiveMetadata::F64
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::String("test".to_string())),
-            XbfPrimitiveMetadata::String
-        );
+        primitive_metadata_from_primitive_test!(Bool, true);
+        primitive_metadata_from_primitive_test!(U8, 1);
+        primitive_metadata_from_primitive_test!(U16, 1);
+        primitive_metadata_from_primitive_test!(U32, 1);
+        primitive_metadata_from_primitive_test!(U64, 1);
+        primitive_metadata_from_primitive_test!(U128, 1);
+        primitive_metadata_from_primitive_test!(U256, [1, 2, 3, 4]);
+        primitive_metadata_from_primitive_test!(I8, 1);
+        primitive_metadata_from_primitive_test!(I16, 1);
+        primitive_metadata_from_primitive_test!(I32, 1);
+        primitive_metadata_from_primitive_test!(I64, 1);
+        primitive_metadata_from_primitive_test!(I128, 1);
+        primitive_metadata_from_primitive_test!(I256, [1, 2, 3, 4]);
+        primitive_metadata_from_primitive_test!(F32, 1.0);
+        primitive_metadata_from_primitive_test!(F64, 1.0);
+        primitive_metadata_from_primitive_test!(String, "Hello World".to_string());
     }
 }
