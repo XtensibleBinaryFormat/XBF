@@ -1,19 +1,19 @@
-use super::XdlStructMetadata;
-use crate::{XdlMetadata, XdlType, XdlTypeUpcast};
+use super::XbfStructMetadata;
+use crate::{XbfMetadata, XbfType, XbfTypeUpcast};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct XdlStruct {
-    pub(crate) metadata: XdlStructMetadata,
-    fields: Vec<XdlType>,
+pub struct XbfStruct {
+    pub(crate) metadata: XbfStructMetadata,
+    fields: Vec<XbfType>,
 }
 
-impl XdlStruct {
-    pub fn new(metadata: XdlStructMetadata, fields: Vec<XdlType>) -> Self {
+impl XbfStruct {
+    pub fn new(metadata: XbfStructMetadata, fields: Vec<XbfType>) -> Self {
         metadata
             .fields
             .iter()
             .zip(fields.iter())
-            .all(|((_, x), y)| *x == XdlMetadata::from(y));
+            .all(|((_, x), y)| *x == XbfMetadata::from(y));
         Self { metadata, fields }
     }
 
@@ -24,41 +24,41 @@ impl XdlStruct {
     }
 
     pub fn deserialize_struct_type(
-        metadata: &XdlStructMetadata,
+        metadata: &XbfStructMetadata,
         reader: &mut impl std::io::Read,
-    ) -> std::io::Result<XdlStruct> {
+    ) -> std::io::Result<XbfStruct> {
         let mut struct_fields = vec![];
         for (_, field_type) in metadata.fields.iter() {
-            struct_fields.push(XdlType::deserialize_base_type(&field_type, reader)?);
+            struct_fields.push(XbfType::deserialize_base_type(&field_type, reader)?);
         }
         Ok(Self::new(metadata.clone(), struct_fields))
     }
 }
 
-impl XdlTypeUpcast for XdlStruct {}
+impl XbfTypeUpcast for XbfStruct {}
 
 #[cfg(test)]
 mod test {
     use std::io::Cursor;
 
-    use super::XdlStruct;
+    use super::XbfStruct;
     use crate::{
-        XdlMetadata, XdlMetadataUpcast, XdlPrimitive, XdlPrimitiveMetadata, XdlStructMetadata,
-        XdlType, XdlTypeUpcast, XdlVec, XdlVecMetadata,
+        XbfMetadata, XbfMetadataUpcast, XbfPrimitive, XbfPrimitiveMetadata, XbfStructMetadata,
+        XbfType, XbfTypeUpcast, XbfVec, XbfVecMetadata,
     };
 
     #[test]
     fn test_struct_serde_works() {
-        let primitive_metadata = XdlMetadata::Primitive(XdlPrimitiveMetadata::I32);
-        let vec_metadata = XdlMetadata::Vec(XdlVecMetadata::new(XdlPrimitiveMetadata::I32.into()));
-        let inner_struct_metadata = XdlStructMetadata::new(
+        let primitive_metadata = XbfMetadata::Primitive(XbfPrimitiveMetadata::I32);
+        let vec_metadata = XbfMetadata::Vec(XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into()));
+        let inner_struct_metadata = XbfStructMetadata::new(
             "test_struct".to_string(),
             vec![(
                 "a".to_string(),
-                XdlMetadata::Primitive(XdlPrimitiveMetadata::I32),
+                XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
             )],
         );
-        let outer_metadata = XdlStructMetadata::new(
+        let outer_metadata = XbfStructMetadata::new(
             "test".to_string(),
             vec![
                 ("a".to_string(), primitive_metadata),
@@ -70,13 +70,13 @@ mod test {
             ],
         );
 
-        let primitive = XdlPrimitive::I32(42);
-        let vec = XdlVec::new_unchecked(
-            XdlPrimitiveMetadata::I32.into(),
+        let primitive = XbfPrimitive::I32(42);
+        let vec = XbfVec::new_unchecked(
+            XbfPrimitiveMetadata::I32.into(),
             vec![primitive.to_base_type()],
         );
-        let inner_struct = XdlStruct::new(inner_struct_metadata, vec![primitive.to_base_type()]);
-        let my_struct = XdlStruct::new(
+        let inner_struct = XbfStruct::new(inner_struct_metadata, vec![primitive.to_base_type()]);
+        let my_struct = XbfStruct::new(
             outer_metadata.clone(),
             vec![
                 primitive.clone().into(),
@@ -97,27 +97,27 @@ mod test {
 
         let mut reader = Cursor::new(writer);
         let deserialized =
-            XdlStruct::deserialize_struct_type(&outer_metadata, &mut reader).unwrap();
+            XbfStruct::deserialize_struct_type(&outer_metadata, &mut reader).unwrap();
 
         assert_eq!(my_struct, deserialized);
     }
 
     #[test]
     fn upcast_works() {
-        let my_struct = XdlStruct::new(
-            XdlStructMetadata::new(
+        let my_struct = XbfStruct::new(
+            XbfStructMetadata::new(
                 "my_struct".to_string(),
-                vec![("field1".to_string(), XdlPrimitiveMetadata::I32.into())],
+                vec![("field1".to_string(), XbfPrimitiveMetadata::I32.into())],
             ),
-            vec![XdlPrimitive::I32(42).into()],
+            vec![XbfPrimitive::I32(42).into()],
         );
 
         assert_eq!(
-            XdlType::Struct(my_struct.clone()),
+            XbfType::Struct(my_struct.clone()),
             (&my_struct).to_base_type()
         );
         assert_eq!(
-            XdlType::Struct(my_struct.clone()),
+            XbfType::Struct(my_struct.clone()),
             my_struct.into_base_type()
         );
     }
