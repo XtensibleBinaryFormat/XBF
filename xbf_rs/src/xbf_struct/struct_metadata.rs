@@ -110,6 +110,7 @@ mod test {
 
         let mut reader = Cursor::new(writer);
         let deserialized = XbfMetadata::deserialize_base_metadata(&mut reader).unwrap();
+
         assert_eq!(XbfMetadata::Struct(metadata), deserialized);
     }
 }
