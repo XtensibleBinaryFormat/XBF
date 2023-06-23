@@ -1,4 +1,4 @@
-package xdl_kt
+package xbf_kt
 
 class Primitive {
   enum class Discriminants {

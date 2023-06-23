@@ -13,5 +13,5 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.4.0"
 }
 
-rootProject.name = "xdl_kt"
+rootProject.name = "xbf_kt"
 include("lib")
