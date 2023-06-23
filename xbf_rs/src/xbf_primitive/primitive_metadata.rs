@@ -20,6 +20,7 @@ pub enum XbfPrimitiveMetadata {
     I256,
     F32,
     F64,
+    Bytes,
     String,
 }
 
@@ -49,7 +50,8 @@ impl TryFrom<u8> for XbfPrimitiveMetadata {
             12 => Ok(Self::I256),
             13 => Ok(Self::F32),
             14 => Ok(Self::F64),
-            15 => Ok(Self::String),
+            15 => Ok(Self::Bytes),
+            16 => Ok(Self::String),
             _ => Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "invalid primitive metadata",
@@ -78,6 +80,7 @@ impl From<&XbfPrimitive> for XbfPrimitiveMetadata {
             XbfPrimitive::I256(_) => XbfPrimitiveMetadata::I256,
             XbfPrimitive::F32(_) => XbfPrimitiveMetadata::F32,
             XbfPrimitive::F64(_) => XbfPrimitiveMetadata::F64,
+            XbfPrimitive::Bytes(_) => XbfPrimitiveMetadata::Bytes,
             XbfPrimitive::String(_) => XbfPrimitiveMetadata::String,
         }
     }
@@ -115,7 +118,8 @@ mod test {
         serialize_primitive_metadata_test!(I256, 12);
         serialize_primitive_metadata_test!(F32, 13);
         serialize_primitive_metadata_test!(F64, 14);
-        serialize_primitive_metadata_test!(String, 15);
+        serialize_primitive_metadata_test!(Bytes, 15);
+        serialize_primitive_metadata_test!(String, 16);
     }
 
     macro_rules! deserialize_primitive_metadata_test {
@@ -147,12 +151,14 @@ mod test {
         deserialize_primitive_metadata_test!(I256);
         deserialize_primitive_metadata_test!(F32);
         deserialize_primitive_metadata_test!(F64);
+        deserialize_primitive_metadata_test!(Bytes);
         deserialize_primitive_metadata_test!(String);
     }
 
     #[test]
     fn metadata_try_from_u8_err_for_unknown_id() {
-        let err = XbfPrimitiveMetadata::try_from(16).unwrap_err();
+        let err =
+            XbfPrimitiveMetadata::try_from(XbfPrimitiveMetadata::String as u8 + 1).unwrap_err();
         assert_eq!(err.kind(), io::ErrorKind::InvalidData);
         assert_eq!(err.to_string(), "invalid primitive metadata");
     }
