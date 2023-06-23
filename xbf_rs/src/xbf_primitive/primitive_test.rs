@@ -1,5 +1,5 @@
 use super::*;
-use crate::{XbfMetadata, XbfType};
+use crate::{XbfMetadata, XbfType, XbfTypeUpcast};
 use std::io::Cursor;
 
 macro_rules! serialize_primitive_test {
@@ -76,20 +76,26 @@ fn unsigned_nums_serde_works() {
 }
 
 #[test]
-#[should_panic(expected = "not implemented")]
-fn u256_serialize_works() {
-    let dne = XbfPrimitive::U256(());
-    dne.serialize_primitive_type(&mut Vec::new()).unwrap();
-}
-#[test]
-#[should_panic(expected = "not implemented")]
-fn u256_deserialize_works() {
-    let mut reader = Cursor::new(vec![XbfPrimitiveMetadata::U256 as u8]);
-    XbfType::deserialize_base_type(
+fn u256_serde_works() {
+    const TEST_NUM: [u64; 4] = [1, 2, 3, 4];
+    let primitive = XbfPrimitive::U256(TEST_NUM);
+    let mut writer = Vec::new();
+
+    primitive.serialize_primitive_type(&mut writer).unwrap();
+
+    let expected = TEST_NUM
+        .iter()
+        .flat_map(|x| x.to_le_bytes())
+        .collect::<Vec<_>>();
+    assert_eq!(writer, expected);
+
+    let mut reader = Cursor::new(writer);
+    let deserialized = XbfType::deserialize_base_type(
         &XbfMetadata::Primitive(XbfPrimitiveMetadata::U256),
         &mut reader,
     )
     .unwrap();
+    assert_eq!(deserialized, primitive.to_base_type());
 }
 
 #[test]
@@ -116,21 +122,26 @@ fn signed_nums_serde_works() {
 }
 
 #[test]
-#[should_panic(expected = "not implemented")]
-fn i256_serialize_works() {
-    let dne = XbfPrimitive::I256(());
-    dne.serialize_primitive_type(&mut Vec::new()).unwrap();
-}
+fn i256_serde_works() {
+    const TEST_NUM: [u64; 4] = [1, 2, 3, 4];
+    let primitive = XbfPrimitive::I256(TEST_NUM);
+    let mut writer = Vec::new();
 
-#[test]
-#[should_panic(expected = "not implemented")]
-fn i256_deserialize_works() {
-    let mut reader = Cursor::new(vec![XbfPrimitiveMetadata::I256 as u8]);
-    XbfType::deserialize_base_type(
+    primitive.serialize_primitive_type(&mut writer).unwrap();
+
+    let expected = TEST_NUM
+        .iter()
+        .flat_map(|x| x.to_le_bytes())
+        .collect::<Vec<_>>();
+    assert_eq!(writer, expected);
+
+    let mut reader = Cursor::new(writer);
+    let deserialized = XbfType::deserialize_base_type(
         &XbfMetadata::Primitive(XbfPrimitiveMetadata::I256),
         &mut reader,
     )
     .unwrap();
+    assert_eq!(deserialized, primitive.to_base_type());
 }
 
 #[test]
