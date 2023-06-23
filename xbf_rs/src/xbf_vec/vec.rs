@@ -22,14 +22,10 @@ impl DeserializeType for XbfVec {
         for _ in 0..len {
             elements.push(XbfType::deserialize_type(metadata, reader)?);
         }
-        Ok(XbfType::Vec(
-            XbfVec::new(metadata.clone(), elements).map_err(|_| {
-                io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "All elements are not the same type",
-                )
-            })?,
-        ))
+        Ok(XbfType::Vec(XbfVec::new_unchecked(
+            metadata.clone(),
+            elements,
+        )))
     }
 }
 
@@ -57,7 +53,7 @@ impl XbfVec {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ElementsNotHomogenousError;
 
 #[cfg(test)]
@@ -68,6 +64,13 @@ mod test {
         xbf_vec::XbfVecMetadata,
     };
     use std::io::Cursor;
+
+    #[test]
+    fn vec_new_fails_with_not_homogenous_data() {
+        let data = vec![XbfPrimitive::I32(42).into(), XbfPrimitive::U32(69).into()];
+        let err = XbfVec::new(XbfMetadata::Primitive(XbfPrimitiveMetadata::I32), data).unwrap_err();
+        assert_eq!(err, ElementsNotHomogenousError);
+    }
 
     #[test]
     fn serialize_vec_primitive_works() {

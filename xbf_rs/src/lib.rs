@@ -7,7 +7,7 @@ mod xbf_vec;
 use byteorder::ReadBytesExt;
 use std::io::{self, Read, Write};
 use xbf_primitive::{XbfPrimitive, XbfPrimitiveMetadata};
-use xbf_struct::{XbfStruct, XbfStructMetadata};
+use xbf_struct::{XbfStruct, XbfStructMetadata, STRUCT_METADATA_DISCRIMINANT};
 use xbf_vec::{XbfVec, XbfVecMetadata, VEC_METADATA_DISCRIMINANT};
 
 trait Serialize {
@@ -58,7 +58,25 @@ impl Serialize for XbfMetadata {
         match self {
             XbfMetadata::Primitive(x) => x.serialize(writer),
             XbfMetadata::Vec(x) => x.serialize(writer),
-            XbfMetadata::Struct(_x) => todo!(),
+            XbfMetadata::Struct(x) => x.serialize(writer),
+        }
+    }
+}
+
+impl DeserializeMetadata for XbfMetadata {
+    fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XbfMetadata> {
+        let discriminant = reader.read_u8()?;
+        if let Ok(x) = discriminant.try_into() {
+            Ok(XbfMetadata::Primitive(x))
+        } else if discriminant == VEC_METADATA_DISCRIMINANT {
+            Ok(XbfVecMetadata::deserialize_metadata(reader)?)
+        } else if discriminant == STRUCT_METADATA_DISCRIMINANT {
+            Ok(XbfStructMetadata::deserialize_metadata(reader)?)
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Unknown metadata discriminant {}", discriminant),
+            ))
         }
     }
 }
@@ -86,19 +104,6 @@ impl DeserializeType for XbfType {
             XbfMetadata::Primitive(x) => XbfPrimitive::deserialize_primitive(x, reader),
             XbfMetadata::Vec(x) => XbfVec::deserialize_type(&x.inner_type, reader),
             XbfMetadata::Struct(_) => todo!(),
-        }
-    }
-}
-
-impl DeserializeMetadata for XbfMetadata {
-    fn deserialize_metadata(reader: &mut impl Read) -> io::Result<XbfMetadata> {
-        let discriminant = reader.read_u8()?;
-        if let Ok(x) = discriminant.try_into() {
-            Ok(XbfMetadata::Primitive(x))
-        } else if discriminant == VEC_METADATA_DISCRIMINANT {
-            Ok(XbfVecMetadata::deserialize_metadata(reader)?)
-        } else {
-            todo!()
         }
     }
 }
