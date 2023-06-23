@@ -1,7 +1,6 @@
+use crate::{XbfMetadataUpcast, XbfPrimitive};
 use byteorder::WriteBytesExt;
 use std::io::{self, Write};
-
-use crate::{XbfMetadataUpcast, XbfPrimitive};
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u8)]
@@ -157,73 +156,5 @@ mod test {
         let err = XbfPrimitiveMetadata::try_from(16).unwrap_err();
         assert_eq!(err.kind(), io::ErrorKind::InvalidData);
         assert_eq!(err.to_string(), "invalid primitive metadata");
-    }
-
-    #[test]
-    fn primitve_metadata_from_primitive_works() {
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::Bool(true)),
-            XbfPrimitiveMetadata::Bool
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U8(1)),
-            XbfPrimitiveMetadata::U8
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U16(1)),
-            XbfPrimitiveMetadata::U16
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U32(1)),
-            XbfPrimitiveMetadata::U32
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U64(1)),
-            XbfPrimitiveMetadata::U64
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U128(1)),
-            XbfPrimitiveMetadata::U128
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U256(())),
-            XbfPrimitiveMetadata::U256
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I8(1)),
-            XbfPrimitiveMetadata::I8
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I16(1)),
-            XbfPrimitiveMetadata::I16
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I32(1)),
-            XbfPrimitiveMetadata::I32
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I64(1)),
-            XbfPrimitiveMetadata::I64
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I128(1)),
-            XbfPrimitiveMetadata::I128
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I256(())),
-            XbfPrimitiveMetadata::I256
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::F32(1.0)),
-            XbfPrimitiveMetadata::F32
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::F64(1.0)),
-            XbfPrimitiveMetadata::F64
-        );
-        assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::String("test".to_string())),
-            XbfPrimitiveMetadata::String
-        );
     }
 }

@@ -14,13 +14,13 @@ pub enum XbfPrimitive {
     U32(u32),
     U64(u64),
     U128(u128),
-    U256(()),
+    U256([u64; 4]),
     I8(i8),
     I16(i16),
     I32(i32),
     I64(i64),
     I128(i128),
-    I256(()),
+    I256([u64; 4]),
     F32(f32),
     F64(f64),
     String(String),
@@ -36,14 +36,18 @@ impl XbfPrimitive {
             XbfPrimitive::U32(x) => writer.write_u32::<LittleEndian>(*x),
             XbfPrimitive::U64(x) => writer.write_u64::<LittleEndian>(*x),
             XbfPrimitive::U128(x) => writer.write_u128::<LittleEndian>(*x),
-            XbfPrimitive::U256(_) => unimplemented!(),
+            XbfPrimitive::U256(x) => x
+                .iter()
+                .try_for_each(|x| writer.write_u64::<LittleEndian>(*x)),
 
             XbfPrimitive::I8(x) => writer.write_i8(*x),
             XbfPrimitive::I16(x) => writer.write_i16::<LittleEndian>(*x),
             XbfPrimitive::I32(x) => writer.write_i32::<LittleEndian>(*x),
             XbfPrimitive::I64(x) => writer.write_i64::<LittleEndian>(*x),
             XbfPrimitive::I128(x) => writer.write_i128::<LittleEndian>(*x),
-            XbfPrimitive::I256(_) => unimplemented!(),
+            XbfPrimitive::I256(x) => x
+                .iter()
+                .try_for_each(|x| writer.write_u64::<LittleEndian>(*x)),
 
             XbfPrimitive::F32(x) => writer.write_f32::<LittleEndian>(*x),
             XbfPrimitive::F64(x) => writer.write_f64::<LittleEndian>(*x),
@@ -65,7 +69,13 @@ impl XbfPrimitive {
             XbfPrimitiveMetadata::U128 => {
                 reader.read_u128::<LittleEndian>().map(XbfPrimitive::U128)
             }
-            XbfPrimitiveMetadata::U256 => unimplemented!(),
+            XbfPrimitiveMetadata::U256 => {
+                let mut data = [0; 4];
+                for i in &mut data {
+                    *i = reader.read_u64::<LittleEndian>()?
+                }
+                Ok(XbfPrimitive::U256(data))
+            }
             XbfPrimitiveMetadata::I8 => reader.read_i8().map(XbfPrimitive::I8),
             XbfPrimitiveMetadata::I16 => reader.read_i16::<LittleEndian>().map(XbfPrimitive::I16),
             XbfPrimitiveMetadata::I32 => reader.read_i32::<LittleEndian>().map(XbfPrimitive::I32),
@@ -73,7 +83,13 @@ impl XbfPrimitive {
             XbfPrimitiveMetadata::I128 => {
                 reader.read_i128::<LittleEndian>().map(XbfPrimitive::I128)
             }
-            XbfPrimitiveMetadata::I256 => unimplemented!(),
+            XbfPrimitiveMetadata::I256 => {
+                let mut data = [0; 4];
+                for i in &mut data {
+                    *i = reader.read_u64::<LittleEndian>()?
+                }
+                Ok(XbfPrimitive::I256(data))
+            }
             XbfPrimitiveMetadata::F32 => reader.read_f32::<LittleEndian>().map(XbfPrimitive::F32),
             XbfPrimitiveMetadata::F64 => reader.read_f64::<LittleEndian>().map(XbfPrimitive::F64),
             XbfPrimitiveMetadata::String => read_string(reader).map(XbfPrimitive::String),
@@ -169,20 +185,26 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "not implemented")]
-    fn u256_serialize_works() {
-        let dne = XbfPrimitive::U256(());
-        dne.serialize_primitive_type(&mut Vec::new()).unwrap();
-    }
-    #[test]
-    #[should_panic(expected = "not implemented")]
-    fn u256_deserialize_works() {
-        let mut reader = Cursor::new(vec![XbfPrimitiveMetadata::U256 as u8]);
-        XbfType::deserialize_base_type(
+    fn u256_serde_works() {
+        const TEST_NUM: [u64; 4] = [1, 2, 3, 4];
+        let primitive = XbfPrimitive::U256(TEST_NUM);
+        let mut writer = Vec::new();
+
+        primitive.serialize_primitive_type(&mut writer).unwrap();
+
+        let expected = TEST_NUM
+            .iter()
+            .flat_map(|x| x.to_le_bytes())
+            .collect::<Vec<_>>();
+        assert_eq!(writer, expected);
+
+        let mut reader = Cursor::new(writer);
+        let deserialized = XbfType::deserialize_base_type(
             &XbfMetadata::Primitive(XbfPrimitiveMetadata::U256),
             &mut reader,
         )
         .unwrap();
+        assert_eq!(deserialized, primitive.to_base_type());
     }
 
     #[test]
@@ -195,20 +217,26 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "not implemented")]
-    fn i256_serialize_works() {
-        let dne = XbfPrimitive::I256(());
-        dne.serialize_primitive_type(&mut Vec::new()).unwrap();
-    }
-    #[test]
-    #[should_panic(expected = "not implemented")]
-    fn i256_deserialize_works() {
-        let mut reader = Cursor::new(vec![XbfPrimitiveMetadata::I256 as u8]);
-        XbfType::deserialize_base_type(
+    fn i256_serde_works() {
+        const TEST_NUM: [u64; 4] = [1, 2, 3, 4];
+        let primitive = XbfPrimitive::I256(TEST_NUM);
+        let mut writer = Vec::new();
+
+        primitive.serialize_primitive_type(&mut writer).unwrap();
+
+        let expected = TEST_NUM
+            .iter()
+            .flat_map(|x| x.to_le_bytes())
+            .collect::<Vec<_>>();
+        assert_eq!(writer, expected);
+
+        let mut reader = Cursor::new(writer);
+        let deserialized = XbfType::deserialize_base_type(
             &XbfMetadata::Primitive(XbfPrimitiveMetadata::I256),
             &mut reader,
         )
         .unwrap();
+        assert_eq!(deserialized, primitive.to_base_type());
     }
 
     #[test]
@@ -284,5 +312,73 @@ mod test {
         primitive_from_native_test!(f32, F32, 42.0);
         primitive_from_native_test!(f64, F64, 42.0);
         primitive_from_native_test!(String, String, "Hello World".to_string());
+    }
+
+    #[test]
+    fn primitve_metadata_from_primitive_works() {
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::Bool(true)),
+            XbfPrimitiveMetadata::Bool
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::U8(1)),
+            XbfPrimitiveMetadata::U8
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::U16(1)),
+            XbfPrimitiveMetadata::U16
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::U32(1)),
+            XbfPrimitiveMetadata::U32
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::U64(1)),
+            XbfPrimitiveMetadata::U64
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::U128(1)),
+            XbfPrimitiveMetadata::U128
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::U256([1, 2, 3, 4])),
+            XbfPrimitiveMetadata::U256
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::I8(1)),
+            XbfPrimitiveMetadata::I8
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::I16(1)),
+            XbfPrimitiveMetadata::I16
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::I32(1)),
+            XbfPrimitiveMetadata::I32
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::I64(1)),
+            XbfPrimitiveMetadata::I64
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::I128(1)),
+            XbfPrimitiveMetadata::I128
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::I256([1, 2, 3, 4])),
+            XbfPrimitiveMetadata::I256
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::F32(1.0)),
+            XbfPrimitiveMetadata::F32
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::F64(1.0)),
+            XbfPrimitiveMetadata::F64
+        );
+        assert_eq!(
+            XbfPrimitiveMetadata::from(&XbfPrimitive::String("test".to_string())),
+            XbfPrimitiveMetadata::String
+        );
     }
 }

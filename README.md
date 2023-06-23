@@ -1,4 +1,7 @@
-# Placeholder Title
+# XBF
+
+[![Coverage Status](https://coveralls.io/repos/github/XtensibleBinaryFormat/XBF/badge.svg?branch=feature/CI)](https://coveralls.io/github/XtensibleBinaryFormat/XBF?branch=feature/CI) 
+![Rust CI Status](https://github.com/XtensibleBinaryFormat/XBF/actions/workflows/rust.yml/badge.svg)
 
 ## Contributing
 
@@ -8,7 +11,7 @@ dual licensed as below, without any additional terms or conditions.
 
 ## License
 
-&copy; 2023 Contributors of Project GrailNetworking.
+&copy; 2023 Contributors of Project Xtensible Binary Format.
 
 This project is licensed under either of
 

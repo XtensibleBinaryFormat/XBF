@@ -137,6 +137,18 @@ mod test {
         let mut data = vec![];
         data.extend_from_slice(&1u16.to_le_bytes());
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
+        let mut reader = Cursor::new(data);
+
+        let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
+        let expected = XbfVec::new(
+            XbfPrimitiveMetadata::I32.into(),
+            vec![XbfType::Primitive(XbfPrimitive::I32(TEST_NUM))],
+        )
+        .unwrap();
+
+        let vec = XbfType::deserialize_base_type(&(metadata.into()), &mut reader).unwrap();
+
+        assert_eq!(vec, expected.into());
     }
 
     #[test]
