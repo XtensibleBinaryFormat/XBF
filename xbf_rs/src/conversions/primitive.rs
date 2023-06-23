@@ -110,7 +110,7 @@ mod test {
             XbfPrimitiveMetadata::U128
         );
         assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::U256(())),
+            XbfPrimitiveMetadata::from(&XbfPrimitive::U256([1, 2, 3, 4])),
             XbfPrimitiveMetadata::U256
         );
         assert_eq!(
@@ -134,7 +134,7 @@ mod test {
             XbfPrimitiveMetadata::I128
         );
         assert_eq!(
-            XbfPrimitiveMetadata::from(&XbfPrimitive::I256(())),
+            XbfPrimitiveMetadata::from(&XbfPrimitive::I256([1, 2, 3, 4])),
             XbfPrimitiveMetadata::I256
         );
         assert_eq!(
