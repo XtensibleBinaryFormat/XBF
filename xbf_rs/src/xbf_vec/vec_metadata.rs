@@ -27,7 +27,7 @@ impl XbfVecMetadata {
 
     pub fn deserialize_vec_metadata(reader: &mut impl Read) -> io::Result<XbfVecMetadata> {
         let inner_type = XbfMetadata::deserialize_base_metadata(reader)?;
-        Ok(XbfVecMetadata::new(inner_type).into())
+        Ok(XbfVecMetadata::new(inner_type))
     }
 }
 
@@ -126,10 +126,11 @@ mod test {
     fn upcast_works() {
         let primitive_metadata = XbfPrimitiveMetadata::I32;
         let vec_metadata = XbfVecMetadata::new(primitive_metadata.into());
+        let vec_metadata_ref = &vec_metadata;
 
         assert_eq!(
             XbfMetadata::Vec(vec_metadata.clone()),
-            (&vec_metadata).to_base_metadata()
+            vec_metadata_ref.to_base_metadata()
         );
         assert_eq!(
             XbfMetadata::Vec(vec_metadata.clone()),

@@ -125,10 +125,11 @@ mod test {
             "test_struct".to_string(),
             vec![("field1".to_string(), XbfPrimitiveMetadata::I32.into())],
         );
+        let struct_metadata_ref = &struct_metadata;
 
         assert_eq!(
             XbfMetadata::Struct(struct_metadata.clone()),
-            (&struct_metadata).to_base_metadata()
+            struct_metadata_ref.to_base_metadata()
         );
         assert_eq!(
             XbfMetadata::Struct(struct_metadata.clone()),

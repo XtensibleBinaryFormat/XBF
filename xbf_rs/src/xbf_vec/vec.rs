@@ -112,7 +112,7 @@ mod test {
         let vec_of_i32_metadata: XbfVecMetadata = (&vec_of_two_i32).into();
         let vec_of_vec_of_i32 = XbfVec::new_unchecked(
             vec_of_i32_metadata.into(),
-            vec![vec_of_two_i32.clone().into(), vec_of_two_i32.clone().into()],
+            vec![vec_of_two_i32.clone().into(), vec_of_two_i32.into()],
         );
 
         let mut writer = vec![];
@@ -169,7 +169,7 @@ mod test {
 
         let metadata = XbfVecMetadata::new(inner_vec_metadata.clone().into());
         let expected_inner_vec = XbfVec::new(
-            inner_integer_metadata.clone().into(),
+            inner_integer_metadata.into(),
             vec![
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
@@ -178,10 +178,7 @@ mod test {
         .unwrap();
         let expected = XbfVec::new(
             inner_vec_metadata.into(),
-            vec![
-                expected_inner_vec.clone().into(),
-                expected_inner_vec.clone().into(),
-            ],
+            vec![expected_inner_vec.clone().into(), expected_inner_vec.into()],
         )
         .unwrap();
 

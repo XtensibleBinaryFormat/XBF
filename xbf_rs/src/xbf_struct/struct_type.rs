@@ -29,7 +29,7 @@ impl XbfStruct {
     ) -> std::io::Result<XbfStruct> {
         let mut struct_fields = vec![];
         for (_, field_type) in metadata.fields.iter() {
-            struct_fields.push(XbfType::deserialize_base_type(&field_type, reader)?);
+            struct_fields.push(XbfType::deserialize_base_type(field_type, reader)?);
         }
         Ok(Self::new(metadata.clone(), struct_fields))
     }
@@ -63,10 +63,7 @@ mod test {
             vec![
                 ("a".to_string(), primitive_metadata),
                 ("b".to_string(), vec_metadata),
-                (
-                    "c".to_string(),
-                    inner_struct_metadata.to_base_metadata().clone(),
-                ),
+                ("c".to_string(), inner_struct_metadata.to_base_metadata()),
             ],
         );
 
@@ -111,10 +108,11 @@ mod test {
             ),
             vec![XbfPrimitive::I32(42).into()],
         );
+        let struct_ref = &my_struct;
 
         assert_eq!(
             XbfType::Struct(my_struct.clone()),
-            (&my_struct).to_base_type()
+            struct_ref.to_base_type()
         );
         assert_eq!(
             XbfType::Struct(my_struct.clone()),
