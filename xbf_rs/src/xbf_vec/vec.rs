@@ -1,4 +1,4 @@
-use crate::{XbfMetadata, XbfType};
+use crate::{XbfMetadata, XbfType, XbfTypeUpcast};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
 
@@ -39,30 +39,29 @@ impl XbfVec {
     }
 
     pub fn deserialize_vec_type(
-        metadata: &XbfMetadata,
+        inner_type: &XbfMetadata,
         reader: &mut impl Read,
-    ) -> io::Result<XbfType> {
+    ) -> io::Result<XbfVec> {
         let len = reader.read_u16::<LittleEndian>()? as usize;
         let mut elements = Vec::with_capacity(len);
         for _ in 0..len {
-            elements.push(XbfType::deserialize_base_type(metadata, reader)?);
+            elements.push(XbfType::deserialize_base_type(inner_type, reader)?);
         }
-        Ok(XbfType::Vec(XbfVec::new_unchecked(
-            metadata.clone(),
-            elements,
-        )))
+        Ok(XbfVec::new_unchecked(inner_type.clone(), elements))
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ElementsNotHomogenousError;
 
+impl XbfTypeUpcast for XbfVec {}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::{
         xbf_primitive::{XbfPrimitive, XbfPrimitiveMetadata},
-        xbf_vec::XbfVecMetadata,
+        XbfVecMetadata,
     };
     use std::io::Cursor;
 
@@ -90,6 +89,13 @@ mod test {
         expected.extend_from_slice(&TEST_NUM.to_le_bytes());
 
         assert_eq!(writer, expected);
+
+        let mut reader = Cursor::new(writer);
+
+        let deserialized =
+            XbfVec::deserialize_vec_type(&XbfPrimitiveMetadata::I32.into(), &mut reader).unwrap();
+
+        assert_eq!(vec, deserialized);
     }
 
     #[test]
@@ -106,7 +112,7 @@ mod test {
         let vec_of_i32_metadata: XbfVecMetadata = (&vec_of_two_i32).into();
         let vec_of_vec_of_i32 = XbfVec::new_unchecked(
             vec_of_i32_metadata.into(),
-            vec![vec_of_two_i32.clone().into(), vec_of_two_i32.clone().into()],
+            vec![vec_of_two_i32.clone().into(), vec_of_two_i32.into()],
         );
 
         let mut writer = vec![];
@@ -163,7 +169,7 @@ mod test {
 
         let metadata = XbfVecMetadata::new(inner_vec_metadata.clone().into());
         let expected_inner_vec = XbfVec::new(
-            inner_integer_metadata.clone().into(),
+            inner_integer_metadata.into(),
             vec![
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
@@ -172,10 +178,7 @@ mod test {
         .unwrap();
         let expected = XbfVec::new(
             inner_vec_metadata.into(),
-            vec![
-                expected_inner_vec.clone().into(),
-                expected_inner_vec.clone().into(),
-            ],
+            vec![expected_inner_vec.clone().into(), expected_inner_vec.into()],
         )
         .unwrap();
 

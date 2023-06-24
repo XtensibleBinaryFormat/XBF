@@ -1,3 +1,4 @@
+use crate::{XbfMetadataUpcast, XbfPrimitive};
 use byteorder::WriteBytesExt;
 use std::io::{self, Write};
 
@@ -57,9 +58,36 @@ impl TryFrom<u8> for XbfPrimitiveMetadata {
     }
 }
 
+impl XbfMetadataUpcast for XbfPrimitiveMetadata {}
+
+impl From<&XbfPrimitive> for XbfPrimitiveMetadata {
+    fn from(x: &XbfPrimitive) -> Self {
+        match x {
+            XbfPrimitive::Bool(_) => XbfPrimitiveMetadata::Bool,
+            XbfPrimitive::U8(_) => XbfPrimitiveMetadata::U8,
+            XbfPrimitive::U16(_) => XbfPrimitiveMetadata::U16,
+            XbfPrimitive::U32(_) => XbfPrimitiveMetadata::U32,
+            XbfPrimitive::U64(_) => XbfPrimitiveMetadata::U64,
+            XbfPrimitive::U128(_) => XbfPrimitiveMetadata::U128,
+            XbfPrimitive::U256(_) => XbfPrimitiveMetadata::U256,
+            XbfPrimitive::I8(_) => XbfPrimitiveMetadata::I8,
+            XbfPrimitive::I16(_) => XbfPrimitiveMetadata::I16,
+            XbfPrimitive::I32(_) => XbfPrimitiveMetadata::I32,
+            XbfPrimitive::I64(_) => XbfPrimitiveMetadata::I64,
+            XbfPrimitive::I128(_) => XbfPrimitiveMetadata::I128,
+            XbfPrimitive::I256(_) => XbfPrimitiveMetadata::I256,
+            XbfPrimitive::F32(_) => XbfPrimitiveMetadata::F32,
+            XbfPrimitive::F64(_) => XbfPrimitiveMetadata::F64,
+            XbfPrimitive::String(_) => XbfPrimitiveMetadata::String,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::XbfMetadata;
+    use std::io::Cursor;
 
     macro_rules! serialize_primitive_metadata_test {
         ($xbf_type:tt, $expected_value:expr) => {
@@ -89,9 +117,6 @@ mod test {
         serialize_primitive_metadata_test!(F64, 14);
         serialize_primitive_metadata_test!(String, 15);
     }
-
-    use crate::XbfMetadata;
-    use std::io::Cursor;
 
     macro_rules! deserialize_primitive_metadata_test {
         ($xbf_type:tt) => {

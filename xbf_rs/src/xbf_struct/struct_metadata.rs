@@ -1,7 +1,7 @@
 use crate::{
+    base_metadata::XbfMetadataUpcast,
     util::{read_string, write_string},
-    xbf_vec::VEC_METADATA_DISCRIMINANT,
-    XbfMetadata,
+    XbfMetadata, XbfStruct, VEC_METADATA_DISCRIMINANT,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
@@ -11,7 +11,7 @@ pub const STRUCT_METADATA_DISCRIMINANT: u8 = VEC_METADATA_DISCRIMINANT + 1;
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct XbfStructMetadata {
     name: String,
-    fields: Vec<(String, XbfMetadata)>,
+    pub(super) fields: Vec<(String, XbfMetadata)>,
 }
 
 impl XbfStructMetadata {
@@ -42,13 +42,19 @@ impl XbfStructMetadata {
     }
 }
 
+impl XbfMetadataUpcast for XbfStructMetadata {}
+
+impl From<&XbfStruct> for XbfStructMetadata {
+    fn from(value: &XbfStruct) -> Self {
+        value.metadata.clone()
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use std::io::Cursor;
-
-    use crate::{xbf_primitive::XbfPrimitiveMetadata, xbf_vec::XbfVecMetadata};
-
     use super::*;
+    use crate::{xbf_primitive::XbfPrimitiveMetadata, XbfVecMetadata};
+    use std::io::Cursor;
 
     #[test]
     fn metadata_serde_works() {
@@ -110,7 +116,24 @@ mod test {
 
         let mut reader = Cursor::new(writer);
         let deserialized = XbfMetadata::deserialize_base_metadata(&mut reader).unwrap();
-
         assert_eq!(XbfMetadata::Struct(metadata), deserialized);
+    }
+
+    #[test]
+    fn upcast_works() {
+        let struct_metadata = XbfStructMetadata::new(
+            "test_struct".to_string(),
+            vec![("field1".to_string(), XbfPrimitiveMetadata::I32.into())],
+        );
+        let struct_metadata_ref = &struct_metadata;
+
+        assert_eq!(
+            XbfMetadata::Struct(struct_metadata.clone()),
+            struct_metadata_ref.to_base_metadata()
+        );
+        assert_eq!(
+            XbfMetadata::Struct(struct_metadata.clone()),
+            struct_metadata.into_base_metadata()
+        );
     }
 }
