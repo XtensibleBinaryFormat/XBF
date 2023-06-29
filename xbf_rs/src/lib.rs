@@ -1,5 +1,6 @@
 mod base_metadata;
 mod base_type;
+mod prelude;
 mod util;
 mod xbf_primitive;
 mod xbf_struct;
