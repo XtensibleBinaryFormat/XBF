@@ -40,7 +40,7 @@ impl XbfVec {
         let len = reader.read_u16::<LittleEndian>()? as usize;
         let mut elements = Vec::with_capacity(len);
         for _ in 0..len {
-            elements.push(XbfType::deserialize_base_type(&inner_type, reader)?);
+            elements.push(XbfType::deserialize_base_type(inner_type, reader)?);
         }
         Ok(XbfVec::new_unchecked(metadata.clone(), elements))
     }
