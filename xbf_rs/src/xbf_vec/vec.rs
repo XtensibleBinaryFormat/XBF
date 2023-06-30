@@ -1,34 +1,28 @@
-use crate::{XbfMetadata, XbfType, XbfTypeUpcast};
+use crate::{XbfType, XbfTypeUpcast, XbfVecMetadata};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct XbfVec {
-    pub(crate) inner_type: XbfMetadata,
+    pub(crate) metadata: XbfVecMetadata,
     elements: Vec<XbfType>,
 }
 
 impl XbfVec {
     pub fn new(
-        inner_type: XbfMetadata,
+        metadata: XbfVecMetadata,
         elements: Vec<XbfType>,
     ) -> Result<Self, ElementsNotHomogenousError> {
-        let all_same_type = elements.iter().all(|x| inner_type == x.into());
+        let all_same_type = elements.iter().all(|x| *metadata.inner_type == x.into());
         if all_same_type {
-            Ok(Self {
-                inner_type,
-                elements,
-            })
+            Ok(Self { metadata, elements })
         } else {
             Err(ElementsNotHomogenousError)
         }
     }
 
-    pub fn new_unchecked(inner_type: XbfMetadata, elements: Vec<XbfType>) -> Self {
-        Self {
-            inner_type,
-            elements,
-        }
+    pub fn new_unchecked(metadata: XbfVecMetadata, elements: Vec<XbfType>) -> Self {
+        Self { metadata, elements }
     }
 
     pub fn serialize_vec_type(&self, writer: &mut impl Write) -> io::Result<()> {
@@ -39,15 +33,20 @@ impl XbfVec {
     }
 
     pub fn deserialize_vec_type(
-        inner_type: &XbfMetadata,
+        metadata: &XbfVecMetadata,
         reader: &mut impl Read,
     ) -> io::Result<XbfVec> {
+        let inner_type = &metadata.inner_type;
         let len = reader.read_u16::<LittleEndian>()? as usize;
         let mut elements = Vec::with_capacity(len);
         for _ in 0..len {
-            elements.push(XbfType::deserialize_base_type(inner_type, reader)?);
+            elements.push(XbfType::deserialize_base_type(&inner_type, reader)?);
         }
-        Ok(XbfVec::new_unchecked(inner_type.clone(), elements))
+        Ok(XbfVec::new_unchecked(metadata.clone(), elements))
+    }
+
+    pub fn get_metadata(&self) -> XbfVecMetadata {
+        self.metadata.clone()
     }
 }
 
@@ -61,22 +60,24 @@ mod test {
     use super::*;
     use crate::{
         xbf_primitive::{XbfPrimitive, XbfPrimitiveMetadata},
-        XbfVecMetadata,
+        XbfMetadataUpcast, XbfVecMetadata,
     };
     use std::io::Cursor;
 
     #[test]
     fn vec_new_fails_with_not_homogenous_data() {
         let data = vec![XbfPrimitive::I32(42).into(), XbfPrimitive::U32(69).into()];
-        let err = XbfVec::new(XbfMetadata::Primitive(XbfPrimitiveMetadata::I32), data).unwrap_err();
+        let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into_base_metadata());
+        let err = XbfVec::new(metadata, data).unwrap_err();
         assert_eq!(err, ElementsNotHomogenousError);
     }
 
     #[test]
     fn serialize_vec_primitive_works() {
         const TEST_NUM: i32 = 42;
+        let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into_base_metadata());
         let vec = XbfVec::new(
-            XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
+            metadata.clone(),
             vec![XbfType::Primitive(XbfPrimitive::I32(TEST_NUM))],
         )
         .unwrap();
@@ -92,8 +93,7 @@ mod test {
 
         let mut reader = Cursor::new(writer);
 
-        let deserialized =
-            XbfVec::deserialize_vec_type(&XbfPrimitiveMetadata::I32.into(), &mut reader).unwrap();
+        let deserialized = XbfVec::deserialize_vec_type(&metadata, &mut reader).unwrap();
 
         assert_eq!(vec, deserialized);
     }
@@ -101,15 +101,16 @@ mod test {
     #[test]
     fn serialize_vec_of_vec_works() {
         const TEST_NUM: i32 = 42;
+        let vec_of_i32_metadata =
+            XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into_base_metadata());
         let vec_of_two_i32 = XbfVec::new(
-            XbfPrimitiveMetadata::I32.into(),
+            vec_of_i32_metadata.clone(),
             vec![
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
             ],
         )
         .unwrap();
-        let vec_of_i32_metadata: XbfVecMetadata = (&vec_of_two_i32).into();
         let vec_of_vec_of_i32 = XbfVec::new_unchecked(
             vec_of_i32_metadata.into(),
             vec![vec_of_two_i32.clone().into(), vec_of_two_i32.into()],
@@ -141,7 +142,7 @@ mod test {
 
         let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
         let expected = XbfVec::new(
-            XbfPrimitiveMetadata::I32.into(),
+            metadata.clone(),
             vec![XbfType::Primitive(XbfPrimitive::I32(TEST_NUM))],
         )
         .unwrap();
@@ -164,25 +165,27 @@ mod test {
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
         let mut reader = Cursor::new(data);
 
-        let inner_integer_metadata = XbfPrimitiveMetadata::I32;
-        let inner_vec_metadata = XbfVecMetadata::new(inner_integer_metadata.into());
+        let int_meta = XbfPrimitiveMetadata::I32;
+        let inner_vec_metadata = XbfVecMetadata::new(int_meta.to_base_metadata());
+        let outer_vec_metadata = XbfVecMetadata::new(inner_vec_metadata.to_base_metadata());
 
-        let metadata = XbfVecMetadata::new(inner_vec_metadata.clone().into());
         let expected_inner_vec = XbfVec::new(
-            inner_integer_metadata.into(),
+            inner_vec_metadata.clone(),
             vec![
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
             ],
         )
         .unwrap();
+
         let expected = XbfVec::new(
-            inner_vec_metadata.into(),
+            outer_vec_metadata.clone(),
             vec![expected_inner_vec.clone().into(), expected_inner_vec.into()],
         )
         .unwrap();
 
-        let vec = XbfType::deserialize_base_type(&(metadata.into()), &mut reader).unwrap();
+        let vec =
+            XbfType::deserialize_base_type(&(outer_vec_metadata.into()), &mut reader).unwrap();
 
         assert_eq!(vec, expected.into());
     }

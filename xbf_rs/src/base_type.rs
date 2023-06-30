@@ -25,9 +25,7 @@ impl XbfType {
             XbfMetadata::Primitive(x) => {
                 XbfPrimitive::deserialize_primitive_type(x, reader).map(|x| x.into())
             }
-            XbfMetadata::Vec(x) => {
-                XbfVec::deserialize_vec_type(&x.inner_type, reader).map(|x| x.into())
-            }
+            XbfMetadata::Vec(x) => XbfVec::deserialize_vec_type(x, reader).map(|x| x.into()),
             XbfMetadata::Struct(x) => {
                 XbfStruct::deserialize_struct_type(x, reader).map(|x| x.into())
             }
