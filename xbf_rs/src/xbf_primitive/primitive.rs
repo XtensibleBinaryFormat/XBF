@@ -1,5 +1,5 @@
 use crate::{
-    util::{read_string, write_string},
+    util::{read_bytes, read_string, write_bytes, write_string},
     XbfPrimitiveMetadata, XbfTypeUpcast,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -22,6 +22,7 @@ pub enum XbfPrimitive {
     I256([u64; 4]),
     F32(f32),
     F64(f64),
+    Bytes(Vec<u8>),
     String(String),
 }
 
@@ -29,7 +30,6 @@ impl XbfPrimitive {
     pub fn serialize_primitive_type(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
             XbfPrimitive::Bool(x) => writer.write_u8(u8::from(*x)),
-
             XbfPrimitive::U8(x) => writer.write_u8(*x),
             XbfPrimitive::U16(x) => writer.write_u16::<LittleEndian>(*x),
             XbfPrimitive::U32(x) => writer.write_u32::<LittleEndian>(*x),
@@ -48,6 +48,7 @@ impl XbfPrimitive {
                 .try_for_each(|x| writer.write_u64::<LittleEndian>(*x)),
             XbfPrimitive::F32(x) => writer.write_f32::<LittleEndian>(*x),
             XbfPrimitive::F64(x) => writer.write_f64::<LittleEndian>(*x),
+            XbfPrimitive::Bytes(x) => write_bytes(x, writer),
             XbfPrimitive::String(x) => write_string(x, writer),
         }
     }
@@ -88,6 +89,7 @@ impl XbfPrimitive {
             }
             XbfPrimitiveMetadata::F32 => reader.read_f32::<LittleEndian>().map(XbfPrimitive::F32),
             XbfPrimitiveMetadata::F64 => reader.read_f64::<LittleEndian>().map(XbfPrimitive::F64),
+            XbfPrimitiveMetadata::Bytes => read_bytes(reader).map(XbfPrimitive::Bytes),
             XbfPrimitiveMetadata::String => read_string(reader).map(XbfPrimitive::String),
         }
     }
@@ -142,6 +144,7 @@ impl_NativeToXbfPrimitive!(i64, I64);
 impl_NativeToXbfPrimitive!(i128, I128);
 impl_NativeToXbfPrimitive!(f32, F32);
 impl_NativeToXbfPrimitive!(f64, F64);
+impl_NativeToXbfPrimitive!(Vec<u8>, Bytes);
 impl_NativeToXbfPrimitive!(String, String);
 
 #[cfg(test)]
@@ -262,7 +265,7 @@ mod test {
     }
 
     #[test]
-    fn string_serialize_works() {
+    fn string_serde_works() {
         let test_string = "hello world".to_string();
         let primitive = XbfPrimitive::String(test_string.clone());
         let mut writer = vec![];
@@ -286,6 +289,33 @@ mod test {
             deserialized,
             XbfType::Primitive(XbfPrimitive::String(test_string))
         );
+    }
+
+    #[test]
+    fn bytes_serde_works() {
+        let test_bytes = vec![1, 2, 3, 4];
+        let primitive = XbfPrimitive::Bytes(test_bytes.clone());
+        let mut writer = vec![];
+
+        primitive.serialize_primitive_type(&mut writer).unwrap();
+
+        let mut expected = vec![];
+        expected.extend_from_slice(&(test_bytes.len() as u16).to_le_bytes());
+        expected.extend_from_slice(&test_bytes);
+
+        assert_eq!(writer, expected);
+
+        let mut reader = Cursor::new(writer);
+        let deserialized = XbfType::deserialize_base_type(
+            &XbfMetadata::Primitive(XbfPrimitiveMetadata::Bytes),
+            &mut reader,
+        )
+        .unwrap();
+
+        assert_eq!(
+            deserialized,
+            XbfType::Primitive(XbfPrimitive::Bytes(test_bytes))
+        )
     }
 
     #[test]
@@ -356,6 +386,7 @@ mod test {
         primitive_metadata_from_primitive_test!(I256, [1, 2, 3, 4]);
         primitive_metadata_from_primitive_test!(F32, 1.0);
         primitive_metadata_from_primitive_test!(F64, 1.0);
+        primitive_metadata_from_primitive_test!(Bytes, vec![1, 2, 3, 4]);
         primitive_metadata_from_primitive_test!(String, "Hello World".to_string());
     }
 }
