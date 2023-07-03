@@ -37,26 +37,16 @@ impl XbfPrimitive {
     /// metadata, convert this type to a [`XbfPrimitiveMetadata`] and call
     /// [`XbfPrimitiveMetadata::serialize_primitive_metadata`].
     ///
-    /// # Serialize Without Metadata
+    /// # Example
     ///
     /// ```rust
     /// use xbf_rs::XbfPrimitive;
     ///
-    /// let primitive = XbfPrimitive::String("hello".to_string());
+    /// let primitive = XbfPrimitive::U64(420);
     /// let mut writer = Vec::new();
     /// primitive.serialize_primitive_type(&mut writer).unwrap();
-    /// ```
     ///
-    /// # Serialize With Metadata
-    ///
-    /// ```rust
-    /// use xbf_rs::XbfPrimitive;
-    /// use xbf_rs::XbfPrimitiveMetadata;
-    ///
-    /// let primitive = XbfPrimitive::String("hello".to_string());
-    /// let mut writer = Vec::new();
-    /// primitive.get_metadata().serialize_primitive_metadata(&mut writer).unwrap();
-    /// primitive.serialize_primitive_type(&mut writer).unwrap();
+    /// assert_eq!(writer, 420u64.to_le_bytes());
     /// ```
     pub fn serialize_primitive_type(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
@@ -152,9 +142,12 @@ impl XbfPrimitive {
     ///
     /// ```rust
     /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::XbfPrimitiveMetadata;
     ///
     /// let primitive = XbfPrimitive::I32(55);
     /// let metadata = primitive.get_metadata();
+    ///
+    /// assert_eq!(metadata, XbfPrimitiveMetadata::I32);
     /// ```
     pub fn get_metadata(&self) -> XbfPrimitiveMetadata {
         XbfPrimitiveMetadata::from(self)

@@ -2,6 +2,7 @@ use crate::{XbfMetadataUpcast, XbfPrimitive};
 use byteorder::WriteBytesExt;
 use std::io::{self, Write};
 
+/// Metadata for a primitive type.
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u8)]
 pub enum XbfPrimitiveMetadata {
@@ -25,9 +26,24 @@ pub enum XbfPrimitiveMetadata {
 }
 
 impl XbfPrimitiveMetadata {
+    /// Serialize primitive metadata as defined by the XBF specification.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    ///
+    /// let metadata = XbfPrimitiveMetadata::Bool;
+    /// let mut writer = Vec::new();
+    /// metadata.serialize_primitive_metadata(&mut writer).unwrap();
+    ///
+    /// assert_eq!(writer, [0u8]);
+    /// ```
     pub fn serialize_primitive_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_u8(*self as u8)
     }
+
+    // TODO: should there be a deserialize_primitive_metadata that wraps the TryFrom impl?
 }
 
 impl TryFrom<u8> for XbfPrimitiveMetadata {
