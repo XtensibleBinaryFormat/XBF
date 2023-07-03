@@ -1,0 +1,40 @@
+default:
+  just --list
+
+# build the project
+build:
+  cargo build
+
+alias b := build
+
+# run unit tests and doctests
+test:
+  cargo test
+
+alias t := test
+
+# run sanity checks without building
+check:
+  cargo check
+  cargo clippy
+
+# clean build artifacts
+clean:
+  cargo clean
+
+# generate a coverate report
+coverage:
+  cargo tarpaulin -o html
+
+# requires nightly to do doctests coverage
+coverage_all:
+  cargo tarpaulin --run-types Tests --run-types Doctests -o html
+
+# generates rustdocs
+docs:
+  cargo doc
+
+# serve docs with cargo-docs
+serve_docs port="42069":
+  cargo docs -w --port {{port}}
+
