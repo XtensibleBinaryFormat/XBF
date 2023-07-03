@@ -5,6 +5,10 @@ use crate::{
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
 
+/// A primitive type as defined by the XBF specification.
+///
+/// Each XBF primitive maps to the corresponding Rust type, with the exception of 256 bit numbers,
+/// which are represented as a `[u64; 4]`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum XbfPrimitive {
     Bool(bool),
@@ -27,6 +31,33 @@ pub enum XbfPrimitive {
 }
 
 impl XbfPrimitive {
+    /// Serialize a primitive type as defined by the XBF specification.
+    ///
+    /// This function **does not** write out the metadata of the type. If you want to write out the
+    /// metadata, convert this type to a [`XbfPrimitiveMetadata`] and call
+    /// [`XbfPrimitiveMetadata::serialize_primitive_metadata`].
+    ///
+    /// # Serialize Without Metadata
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfPrimitive;
+    ///
+    /// let primitive = XbfPrimitive::String("hello".to_string());
+    /// let mut writer = Vec::new();
+    /// primitive.serialize_primitive_type(&mut writer).unwrap();
+    /// ```
+    ///
+    /// # Serialize With Metadata
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    ///
+    /// let primitive = XbfPrimitive::String("hello".to_string());
+    /// let mut writer = Vec::new();
+    /// primitive.get_metadata().serialize_primitive_metadata(&mut writer).unwrap();
+    /// primitive.serialize_primitive_type(&mut writer).unwrap();
+    /// ```
     pub fn serialize_primitive_type(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
             XbfPrimitive::Bool(x) => writer.write_u8(u8::from(*x)),
@@ -53,6 +84,24 @@ impl XbfPrimitive {
         }
     }
 
+    /// Deserialize a primitive type as defined by the XBF specification.
+    ///
+    /// This function **does not** read the metadata of the type from the reader. It is expected
+    /// that to call this function the metadata for a type is already known, be that from reading
+    /// it from the reader with [`deserialize_base_metadata`](crate::XbfMetadata::deserialize_base_metadata)
+    /// or having it in some other manner.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    ///
+    /// let metadata = XbfPrimitiveMetadata::I32;
+    /// let mut reader = std::io::Cursor::new(69i32.to_le_bytes());
+    ///
+    /// let primitive = XbfPrimitive::deserialize_primitive_type(&metadata, &mut reader).unwrap();
+    /// ```
     pub fn deserialize_primitive_type(
         primitive_metadata: &XbfPrimitiveMetadata,
         reader: &mut impl Read,
@@ -94,6 +143,19 @@ impl XbfPrimitive {
         }
     }
 
+    /// Get the metadata for this primitive type.
+    ///
+    /// Primitive metadata is only a discriminant value, so an owned copy of the metadata is
+    /// returned as doing so is inexpensive.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfPrimitive;
+    ///
+    /// let primitive = XbfPrimitive::I32(55);
+    /// let metadata = primitive.get_metadata();
+    /// ```
     pub fn get_metadata(&self) -> XbfPrimitiveMetadata {
         XbfPrimitiveMetadata::from(self)
     }
@@ -101,13 +163,54 @@ impl XbfPrimitive {
 
 impl XbfTypeUpcast for XbfPrimitive {}
 
+// TODO: Seal this trait so that nobody can implement it
+// TODO: Are the names of the provided methods correct?
+// TODO: Should both methods be in one trait?
+//
+/// A trait for converting native Rust types to [`XbfPrimitive`] types.
+///
+/// This trait is implemented for all of the supported types that have an XBF equivalent.
+///
+/// You should not implement this trait yourself.
 pub trait NativeToXbfPrimitive: Into<XbfPrimitive>
 where
     XbfPrimitive: for<'a> From<&'a Self>,
 {
+    /// Convert a native Rust type to a [`XbfPrimitive`] type.
+    ///
+    /// Calling this method may result in a clone if the type is [`XbfPrimitive::Bytes`]
+    /// or [`XbfPrimitive::String`].
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::NativeToXbfPrimitive;
+    ///
+    /// let native = 69i32;
+    /// let primitive = native.to_xbf_primitive();
+    ///
+    /// assert_eq!(primitive, XbfPrimitive::I32(69));
+    /// ```
     fn to_xbf_primitive(&self) -> XbfPrimitive {
         self.into()
     }
+
+    /// Convert a native Rust type to a [`XbfPrimitive`] type, consuming `self`.
+    ///
+    /// Calling this method should not result in a clone.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::NativeToXbfPrimitive;
+    ///
+    /// let native = 69i32;
+    /// let primitive = native.into_xbf_primitive();
+    ///
+    /// assert_eq!(primitive, XbfPrimitive::I32(69));
+    /// ```
     fn into_xbf_primitive(self) -> XbfPrimitive {
         self.into()
     }
