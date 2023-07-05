@@ -1,3 +1,4 @@
+//! A struct as defined by the XBF specification
 mod struct_metadata;
 mod struct_type;
 

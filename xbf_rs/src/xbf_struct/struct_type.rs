@@ -1,5 +1,6 @@
 use crate::{XbfMetadata, XbfStructMetadata, XbfType, XbfTypeUpcast};
 
+/// A struct as defined by the XBF specification.
 #[derive(Debug, Clone, PartialEq)]
 pub struct XbfStruct {
     pub(crate) metadata: XbfStructMetadata,
@@ -7,6 +8,36 @@ pub struct XbfStruct {
 }
 
 impl XbfStruct {
+    /// Creates a new [`XbfStruct`]
+    ///
+    /// TODO: There is a glaring bug in the implementation, see issue #44
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfStruct;
+    /// use xbf_rs::XbfStructMetadata;
+    /// use xbf_rs::XbfMetadata;
+    /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    /// use xbf_rs::XbfType;
+    ///
+    /// let name = "test_struct".to_string();
+    /// let field1_name = "a".to_string();
+    /// let field1_type = XbfMetadata::Primitive(XbfPrimitiveMetadata::I32);
+    /// let field2_name = "b".to_string();
+    /// let field2_type = XbfMetadata::Primitive(XbfPrimitiveMetadata::U64);
+    ///
+    /// let metadata = XbfStructMetadata::new(name, vec![
+    ///     (field1_name, field1_type),
+    ///     (field2_name, field2_type),
+    /// ]);
+    ///
+    /// let struct_type = XbfStruct::new(metadata, vec![
+    ///      XbfPrimitive::I32(42).into(),
+    ///      XbfPrimitive::U64(42).into(),
+    /// ]);
+    ///```
     pub fn new(metadata: XbfStructMetadata, fields: Vec<XbfType>) -> Self {
         metadata
             .fields
@@ -16,12 +47,71 @@ impl XbfStruct {
         Self { metadata, fields }
     }
 
+    /// Serialize a struct as defined by the XBF specification.
+    ///
+    /// This function **does not** write out the metadata of the type. If you want to write out the
+    /// metadata, get the metadata with [`Self::get_metadata`] and serialize that with
+    /// [`XbfStructMetadata::serialize_struct_metadata`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfStruct;
+    /// use xbf_rs::XbfStructMetadata;
+    /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    ///
+    /// let val = XbfStruct::new(
+    ///     XbfStructMetadata::new(
+    ///         "test_struct".to_string(),
+    ///         vec![(
+    ///             "a".to_string(),
+    ///             XbfPrimitiveMetadata::I32.into(),
+    ///         )],
+    ///     ),
+    ///     vec![XbfPrimitive::I32(42).into()],
+    /// );
+    /// let mut writer = vec![];
+    /// val.serialize_struct_type(&mut writer).unwrap();
+    ///
+    /// let mut expected = 42i32.to_le_bytes();
+    /// assert_eq!(writer, expected);
+    /// ```
     pub fn serialize_struct_type(&self, writer: &mut impl std::io::Write) -> std::io::Result<()> {
         self.fields
             .iter()
             .try_for_each(|f| f.serialize_base_type(writer))
     }
 
+    /// Deserialize a struct as defined by the XBF specification.
+    ///
+    /// This function **does not** read the metadata of the type from the reader. It is expected
+    /// that to call this function the metadata for atype is already known, be that from reading it
+    /// from the reader with [`deserialize_base_metadata`](crate::XbfMetadata::deserialize_base_metadata)
+    /// or having it in some other manner.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfStruct;
+    /// use xbf_rs::XbfStructMetadata;
+    /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    ///
+    /// // setting up a reader with one i32 in it
+    /// let mut reader = vec![];
+    /// reader.extend_from_slice(&42i32.to_le_bytes());
+    /// let mut reader = std::io::Cursor::new(reader);
+    ///
+    /// // the metadata we've gotten from somewhere describing the type
+    /// let metadata = XbfStructMetadata::new(
+    ///     "test_struct".to_string(),
+    ///     vec![("a".to_string(), XbfPrimitiveMetadata::I32.into())],
+    /// );
+    ///
+    /// // deserializing the struct with the given metadata
+    /// let val = XbfStruct::deserialize_struct_type(&metadata, &mut reader).unwrap();
+    /// ```
     pub fn deserialize_struct_type(
         metadata: &XbfStructMetadata,
         reader: &mut impl std::io::Read,
@@ -33,6 +123,36 @@ impl XbfStruct {
         Ok(Self::new(metadata.clone(), struct_fields))
     }
 
+    /// Returns the metadata of the struct.
+    ///
+    /// Getting the metadata returns an owned [`XbfStructMetadata`], which requires a clone to take
+    /// place. This will likely be changed in the future to be mroe efficient.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfStruct;
+    /// use xbf_rs::XbfStructMetadata;
+    /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    ///
+    /// let val = XbfStruct::new(
+    ///     XbfStructMetadata::new(
+    ///         "test_struct".to_string(),
+    ///         vec![(
+    ///             "a".to_string(),
+    ///             XbfPrimitiveMetadata::I32.into(),
+    ///         )],
+    ///     ),
+    ///     vec![XbfPrimitive::I32(42).into()],
+    /// );
+    ///
+    /// let metadata = val.get_metadata();
+    ///
+    /// assert_eq!(metadata, XbfStructMetadata::new("test_struct".to_string(), vec![
+    ///     ("a".to_string(), XbfPrimitiveMetadata::I32.into()),
+    /// ]));
+    /// ```
     pub fn get_metadata(&self) -> XbfStructMetadata {
         self.metadata.clone()
     }
