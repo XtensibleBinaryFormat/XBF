@@ -81,7 +81,7 @@ impl XbfVec {
     ///
     /// This function **does not** write out the metadata of the type. If you want to write out the
     /// metadata, convert this type to a [`XbfVecMetadata`] and call
-    /// [`XbfVecMetadata::serialize_primitive_metadata`].
+    /// [`XbfVecMetadata::serialize_vec_metadata`].
     ///
     /// # Example
     ///
@@ -174,7 +174,11 @@ impl XbfVec {
     }
 }
 
-/// TODO: document
+/// Error type for [`XbfVec`]
+///
+/// In the future this may include information about what element wasn't
+/// the same type as the metadata.
+/// TODO: more error information?
 #[derive(Debug, PartialEq, Eq)]
 pub struct ElementsNotHomogenousError;
 
