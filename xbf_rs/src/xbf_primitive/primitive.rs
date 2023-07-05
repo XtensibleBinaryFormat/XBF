@@ -93,35 +93,59 @@ impl XbfPrimitive {
             XbfPrimitiveMetadata::String => read_string(reader).map(XbfPrimitive::String),
         }
     }
+
+    pub fn get_metadata(&self) -> XbfPrimitiveMetadata {
+        XbfPrimitiveMetadata::from(self)
+    }
 }
 
 impl XbfTypeUpcast for XbfPrimitive {}
 
-macro_rules! xbf_primitive_from_native_impl {
+pub trait NativeToXbfPrimitive: Into<XbfPrimitive>
+where
+    XbfPrimitive: for<'a> From<&'a Self>,
+{
+    fn to_xbf_primitive(&self) -> XbfPrimitive {
+        self.into()
+    }
+    fn into_xbf_primitive(self) -> XbfPrimitive {
+        self.into()
+    }
+}
+
+macro_rules! impl_NativeToXbfPrimitive {
     ($ty:ty, $xbf_type:tt) => {
         impl From<$ty> for XbfPrimitive {
             fn from(x: $ty) -> Self {
                 XbfPrimitive::$xbf_type(x)
             }
         }
+
+        impl From<&$ty> for XbfPrimitive {
+            fn from(x: &$ty) -> Self {
+                XbfPrimitive::$xbf_type(x.clone())
+            }
+        }
+
+        impl NativeToXbfPrimitive for $ty {}
     };
 }
 
-xbf_primitive_from_native_impl!(bool, Bool);
-xbf_primitive_from_native_impl!(u8, U8);
-xbf_primitive_from_native_impl!(u16, U16);
-xbf_primitive_from_native_impl!(u32, U32);
-xbf_primitive_from_native_impl!(u64, U64);
-xbf_primitive_from_native_impl!(u128, U128);
-xbf_primitive_from_native_impl!(i8, I8);
-xbf_primitive_from_native_impl!(i16, I16);
-xbf_primitive_from_native_impl!(i32, I32);
-xbf_primitive_from_native_impl!(i64, I64);
-xbf_primitive_from_native_impl!(i128, I128);
-xbf_primitive_from_native_impl!(f32, F32);
-xbf_primitive_from_native_impl!(f64, F64);
-xbf_primitive_from_native_impl!(Vec<u8>, Bytes);
-xbf_primitive_from_native_impl!(String, String);
+impl_NativeToXbfPrimitive!(bool, Bool);
+impl_NativeToXbfPrimitive!(u8, U8);
+impl_NativeToXbfPrimitive!(u16, U16);
+impl_NativeToXbfPrimitive!(u32, U32);
+impl_NativeToXbfPrimitive!(u64, U64);
+impl_NativeToXbfPrimitive!(u128, U128);
+impl_NativeToXbfPrimitive!(i8, I8);
+impl_NativeToXbfPrimitive!(i16, I16);
+impl_NativeToXbfPrimitive!(i32, I32);
+impl_NativeToXbfPrimitive!(i64, I64);
+impl_NativeToXbfPrimitive!(i128, I128);
+impl_NativeToXbfPrimitive!(f32, F32);
+impl_NativeToXbfPrimitive!(f64, F64);
+impl_NativeToXbfPrimitive!(Vec<u8>, Bytes);
+impl_NativeToXbfPrimitive!(String, String);
 
 #[cfg(test)]
 mod test {
@@ -131,7 +155,7 @@ mod test {
 
     macro_rules! serde_primitive_test {
         ($xbf_type:tt, $test_num:expr) => {
-            let primitive = XbfPrimitive::$xbf_type($test_num);
+            let primitive = $test_num.to_xbf_primitive();
             let mut writer = Vec::new();
 
             primitive.serialize_primitive_type(&mut writer).unwrap();
@@ -142,7 +166,7 @@ mod test {
             let mut reader = Cursor::new(writer);
 
             let metadata = XbfMetadata::Primitive(XbfPrimitiveMetadata::$xbf_type);
-            let expected = XbfType::Primitive(XbfPrimitive::$xbf_type($test_num));
+            let expected = XbfType::Primitive($test_num.into_xbf_primitive());
 
             let primitive = XbfType::deserialize_base_type(&metadata, &mut reader).unwrap();
             assert_eq!(primitive, expected);

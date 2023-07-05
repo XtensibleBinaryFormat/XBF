@@ -32,6 +32,10 @@ impl XbfStruct {
         }
         Ok(Self::new(metadata.clone(), struct_fields))
     }
+
+    pub fn get_metadata(&self) -> XbfStructMetadata {
+        self.metadata.clone()
+    }
 }
 
 impl XbfTypeUpcast for XbfStruct {}
@@ -64,7 +68,7 @@ mod test {
 
         let primitive = XbfPrimitive::I32(42);
         let vec = XbfVec::new_unchecked(
-            XbfPrimitiveMetadata::I32.into(),
+            XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into()),
             vec![primitive.to_base_type()],
         );
         let inner_struct = XbfStruct::new(inner_struct_metadata, vec![primitive.to_base_type()]);

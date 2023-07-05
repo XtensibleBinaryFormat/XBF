@@ -35,7 +35,7 @@ impl XbfMetadataUpcast for XbfVecMetadata {}
 
 impl From<&XbfVec> for XbfVecMetadata {
     fn from(value: &XbfVec) -> Self {
-        Self::new(value.inner_type.clone())
+        Self::from_boxed_type(value.metadata.inner_type.clone())
     }
 }
 
