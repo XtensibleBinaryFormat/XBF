@@ -1,6 +1,6 @@
 # XBF
 
-[![Coverage Status](https://coveralls.io/repos/github/XtensibleBinaryFormat/XBF/badge.svg?branch=feature/CI)](https://coveralls.io/github/XtensibleBinaryFormat/XBF?branch=feature/CI) 
+[![Coverage Status](https://coveralls.io/repos/github/XtensibleBinaryFormat/XBF/badge.svg?branch=main)](https://coveralls.io/github/XtensibleBinaryFormat/XBF?branch=main)
 ![Rust CI Status](https://github.com/XtensibleBinaryFormat/XBF/actions/workflows/rust.yml/badge.svg)
 
 ## Contributing
