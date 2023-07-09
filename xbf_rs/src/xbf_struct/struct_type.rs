@@ -1,5 +1,9 @@
 use crate::{XbfMetadata, XbfStructMetadata, XbfType, XbfTypeUpcast};
-use std::{error::Error, fmt::Display, io};
+use std::{
+    error::Error,
+    fmt::Display,
+    io::{self, Read, Write},
+};
 
 /// A struct as defined by the XBF specification.
 #[derive(Debug, Clone, PartialEq)]
@@ -9,9 +13,12 @@ pub struct XbfStruct {
 }
 
 impl XbfStruct {
-    /// Creates a new [`XbfStruct`]
+    /// Tries to create a new [`XbfStruct`] based on the supplied metadata.
     ///
-    /// TODO: There is a glaring bug in the implementation, see issue #44
+    /// # Errors
+    ///
+    /// If all fields are not the same XBF type as what's specififed in the metadata,
+    /// returns an [`StructFieldMismatchError`].
     ///
     /// # Examples
     ///
@@ -34,10 +41,20 @@ impl XbfStruct {
     ///     (field2_name, field2_type),
     /// ]);
     ///
-    /// let struct_type = XbfStruct::new(metadata, vec![
+    /// let struct_type = XbfStruct::new(metadata.clone(), vec![
     ///      XbfPrimitive::I32(42).into(),
     ///      XbfPrimitive::U64(42).into(),
     /// ]);
+    ///
+    /// assert!(struct_type.is_ok());
+    ///
+    /// let struct2 = XbfStruct::new(metadata, vec![
+    ///     XbfPrimitive::I32(42).into(),
+    ///     XbfPrimitive::I64(42).into(),
+    ///   
+    /// ]);
+    ///
+    /// assert!(struct2.is_err());
     ///```
     pub fn new(
         metadata: XbfStructMetadata,
@@ -56,6 +73,34 @@ impl XbfStruct {
         Ok(Self { metadata, fields })
     }
 
+    /// Creates a new [`XbfStruct`] with the supplied metadata and fields without checking if the
+    /// given fields are the correct types.
+    ///
+    /// # Example
+    /// ```rust
+    /// use xbf_rs::XbfStruct;
+    /// use xbf_rs::XbfStructMetadata;
+    /// use xbf_rs::XbfMetadata;
+    /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    /// use xbf_rs::XbfType;
+    ///
+    /// let name = "test_struct".to_string();
+    /// let field1_name = "a".to_string();
+    /// let field1_type = XbfMetadata::Primitive(XbfPrimitiveMetadata::I32);
+    /// let field2_name = "b".to_string();
+    /// let field2_type = XbfMetadata::Primitive(XbfPrimitiveMetadata::U64);
+    ///
+    /// let metadata = XbfStructMetadata::new(name, vec![
+    ///     (field1_name, field1_type),
+    ///     (field2_name, field2_type),
+    /// ]);
+    ///
+    /// let struct_type = XbfStruct::new(metadata.clone(), vec![
+    ///      XbfPrimitive::I32(42).into(),
+    ///      XbfPrimitive::U64(42).into(),
+    /// ]);
+    /// ```
     pub fn new_unchecked(metadata: XbfStructMetadata, fields: Vec<XbfType>) -> Self {
         Self { metadata, fields }
     }
@@ -83,14 +128,14 @@ impl XbfStruct {
     ///         )],
     ///     ),
     ///     vec![XbfPrimitive::I32(42).into()],
-    /// );
+    /// ).expect("a valid struct");
     /// let mut writer = vec![];
     /// val.serialize_struct_type(&mut writer).unwrap();
     ///
     /// let mut expected = 42i32.to_le_bytes();
     /// assert_eq!(writer, expected);
     /// ```
-    pub fn serialize_struct_type(&self, writer: &mut impl std::io::Write) -> io::Result<()> {
+    pub fn serialize_struct_type(&self, writer: &mut impl Write) -> io::Result<()> {
         self.fields
             .iter()
             .try_for_each(|f| f.serialize_base_type(writer))
@@ -127,7 +172,7 @@ impl XbfStruct {
     /// ```
     pub fn deserialize_struct_type(
         metadata: &XbfStructMetadata,
-        reader: &mut impl std::io::Read,
+        reader: &mut impl Read,
     ) -> io::Result<XbfStruct> {
         let mut struct_fields = vec![];
         for (_, field_type) in metadata.fields.iter() {
@@ -160,7 +205,7 @@ impl XbfStruct {
     ///     vec![XbfPrimitive::I32(42).into()],
     /// );
     ///
-    /// let metadata = val.get_metadata();
+    /// let metadata = val.expect("a valid struct").get_metadata();
     ///
     /// assert_eq!(metadata, XbfStructMetadata::new("test_struct".to_string(), vec![
     ///     ("a".to_string(), XbfPrimitiveMetadata::I32.into()),
