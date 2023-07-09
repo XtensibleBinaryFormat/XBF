@@ -1,3 +1,7 @@
+//! This crate is a Rust implementaton of the XBF serialization and deserialization format.
+//!
+//! The format itself is described [here](https://github.com/XtensibleBinaryFormat/XBF/blob/main/docs/specification.md)
+
 mod base_metadata;
 mod base_type;
 mod prelude;
