@@ -30,7 +30,7 @@ impl XbfMetadata {
         } else if discriminant == VEC_METADATA_DISCRIMINANT {
             Ok(XbfVecMetadata::deserialize_vec_metadata(reader)?.to_base_metadata())
         } else if discriminant == STRUCT_METADATA_DISCRIMINANT {
-            Ok(XbfStructMetadata::deserialize_struct_metadata(reader)?)
+            Ok(XbfStructMetadata::deserialize_struct_metadata(reader)?.to_base_metadata())
         } else {
             Err(io::Error::new(
                 io::ErrorKind::InvalidData,

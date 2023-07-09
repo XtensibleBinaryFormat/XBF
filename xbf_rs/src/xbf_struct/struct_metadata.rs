@@ -6,8 +6,13 @@ use crate::{
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
 
+/// The metadata discriminant for a Struct type.
+///
+/// This is the same for all structs regardless of their contents. It's value should always be
+/// equal to the discriminant value of the vector type plus one.
 pub const STRUCT_METADATA_DISCRIMINANT: u8 = VEC_METADATA_DISCRIMINANT + 1;
 
+/// Metadata for a Struct type.
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct XbfStructMetadata {
     name: String,
@@ -15,10 +20,69 @@ pub struct XbfStructMetadata {
 }
 
 impl XbfStructMetadata {
+    /// Creates a new [`XbfStructMetadata`].
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfStructMetadata;
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    ///
+    /// let metadata = XbfStructMetadata::new(
+    ///     "test_struct".to_string(),
+    ///     vec![
+    ///         ("a".to_string(), XbfPrimitiveMetadata::I32.into()),
+    ///         ("b".to_string(), XbfPrimitiveMetadata::U64.into()),
+    ///     ],
+    /// );
+    ///
+    /// // TODO: accessors for the name and fields? with a similar api to a hashmap?
     pub fn new(name: String, fields: Vec<(String, XbfMetadata)>) -> Self {
         Self { name, fields }
     }
 
+    /// Serialize a struct as defined by the XBF specification.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfStruct;
+    /// use xbf_rs::XbfStructMetadata;
+    /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    /// use xbf_rs::STRUCT_METADATA_DISCRIMINANT;
+    ///
+    /// let struct_name = "test_struct".to_string();
+    /// let field1_name = "a".to_string();
+    /// let field2_name = "b".to_string();
+    /// let metadata = XbfStructMetadata::new(
+    ///     struct_name.clone(),
+    ///     vec![
+    ///         (field1_name.clone(), XbfPrimitiveMetadata::I32.into()),
+    ///         (field2_name.clone(), XbfPrimitiveMetadata::U64.into()),
+    ///     ],
+    /// );
+    /// let mut writer = vec![];
+    ///
+    /// metadata.serialize_struct_metadata(&mut writer).unwrap();
+    ///
+    /// let expected = (|| {
+    ///     let mut v = vec![STRUCT_METADATA_DISCRIMINANT];
+    ///     v.extend_from_slice((struct_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice(struct_name.as_bytes());
+    ///     v.extend_from_slice(2u16.to_le_bytes().as_slice());
+    ///     v.extend_from_slice((field1_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice(field1_name.as_bytes());
+    ///     v.extend_from_slice((XbfPrimitiveMetadata::I32 as u8).to_le_bytes().as_slice());
+    ///     v.extend_from_slice((field2_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice(field2_name.as_bytes());
+    ///     v.extend_from_slice((XbfPrimitiveMetadata::U64 as u8).to_le_bytes().as_slice());
+    ///     v
+    /// })();
+    ///
+    ///
+    /// assert_eq!(writer, expected);
+    /// ```
     pub fn serialize_struct_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_u8(STRUCT_METADATA_DISCRIMINANT)?;
         write_string(&self.name, writer)?;
@@ -28,7 +92,45 @@ impl XbfStructMetadata {
         })
     }
 
-    pub fn deserialize_struct_metadata(reader: &mut impl Read) -> io::Result<XbfMetadata> {
+    /// Deserialize struct metadata as defined by the XBF specification.
+    ///
+    ///This method assumes that you know for a fact you are about to receive Struct metadata. If you
+    /// do not know what sort of metadata you are receiving, use
+    /// [`deserialize_base_metadata`](crate::XbfMetadata::deserialize_base_metadata).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfStructMetadata;
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    /// use xbf_rs::STRUCT_METADATA_DISCRIMINANT;
+    ///
+    /// let struct_name = "test_struct".to_string();
+    /// let field1_name = "a".to_string();
+    /// let field2_name = "b".to_string();
+    ///
+    /// let reader = (|| {
+    ///     let mut v = vec![];
+    ///     v.extend_from_slice((struct_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice(struct_name.as_bytes());
+    ///     v.extend_from_slice(2u16.to_le_bytes().as_slice());
+    ///     v.extend_from_slice((field1_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice(field1_name.as_bytes());
+    ///     v.extend_from_slice((XbfPrimitiveMetadata::I32 as u8).to_le_bytes().as_slice());
+    ///     v.extend_from_slice((field2_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice(field2_name.as_bytes());
+    ///     v.extend_from_slice((XbfPrimitiveMetadata::U64 as u8).to_le_bytes().as_slice());
+    ///     v
+    /// })();
+    /// let mut reader = std::io::Cursor::new(reader);
+    ///
+    /// let metadata = XbfStructMetadata::deserialize_struct_metadata(&mut reader).unwrap();
+    ///
+    /// assert_eq!(metadata, XbfStructMetadata::new(struct_name, vec![
+    ///     (field1_name, XbfPrimitiveMetadata::I32.into()),
+    ///     (field2_name, XbfPrimitiveMetadata::U64.into()),
+    /// ]));
+    pub fn deserialize_struct_metadata(reader: &mut impl Read) -> io::Result<XbfStructMetadata> {
         let name = read_string(reader)?;
         let len = reader.read_u16::<LittleEndian>()?;
         let mut fields = Vec::with_capacity(len as usize);
@@ -38,7 +140,7 @@ impl XbfStructMetadata {
                 XbfMetadata::deserialize_base_metadata(reader)?,
             ))
         }
-        Ok(XbfMetadata::Struct(XbfStructMetadata { name, fields }))
+        Ok(XbfStructMetadata { name, fields })
     }
 }
 
