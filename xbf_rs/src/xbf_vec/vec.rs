@@ -1,6 +1,11 @@
-use crate::{XbfType, XbfTypeUpcast, XbfVecMetadata};
+use crate::{XbfMetadataUpcast, XbfPrimitive, XbfType, XbfTypeUpcast, XbfVecMetadata};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::io::{self, Read, Write};
+use std::{
+    default::Default,
+    io::{self, Read, Write},
+    ops::Index,
+    slice::{Iter, SliceIndex},
+};
 
 /// A vector type as defined by the XBF specification.
 #[derive(Debug, Clone, PartialEq)]
@@ -118,7 +123,7 @@ impl XbfVec {
     /// [`deserialize_base_metadata`](crate::XbfMetadata::deserialize_base_metadata)
     /// or having it in some other manner.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use xbf_rs::XbfVec;
@@ -152,7 +157,7 @@ impl XbfVec {
     /// Getting the metadata returns an owned [`XbfVecMetadata`], which requires a clone to take
     /// place. This will likely be changed in the future to be more efficient.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust
     /// use xbf_rs::XbfVec;
@@ -172,7 +177,103 @@ impl XbfVec {
     pub fn get_metadata(&self) -> XbfVecMetadata {
         self.metadata.clone()
     }
+
+    pub fn get<I>(&self, index: I) -> Option<&<I as SliceIndex<[XbfType]>>::Output>
+    where
+        I: SliceIndex<[XbfType]>,
+    {
+        self.elements.get(index)
+    }
+
+    /// Returns an iterator over the vector.
+    ///
+    /// The iterator yields all items from start to end.
+    ///
+    /// # Examples
+    /// ```rust
+    ///
+    pub fn iter(&self) -> impl Iterator<Item = &XbfType> {
+        self.elements.iter()
+    }
 }
+
+impl AsRef<[XbfType]> for XbfVec {
+    fn as_ref(&self) -> &[XbfType] {
+        self.elements.as_ref()
+    }
+}
+
+impl<I> Index<I> for XbfVec
+where
+    I: SliceIndex<[XbfType]>,
+{
+    type Output = <I as SliceIndex<[XbfType]>>::Output;
+
+    fn index(&self, index: I) -> &Self::Output {
+        &self.elements[index]
+    }
+}
+
+impl<'a> IntoIterator for &'a XbfVec {
+    type Item = &'a XbfType;
+
+    type IntoIter = Iter<'a, XbfType>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.iter()
+    }
+}
+
+impl IntoIterator for XbfVec {
+    type Item = XbfType;
+
+    type IntoIter = <Vec<XbfType> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.into_iter()
+    }
+}
+
+impl<T> From<&[T]> for XbfVec
+where
+    for<'a> XbfPrimitive: From<&'a T>,
+    XbfPrimitive: From<T>,
+    T: Default,
+{
+    fn from(value: &[T]) -> Self {
+        let primitive_metadata = XbfPrimitive::from(T::default()).get_metadata();
+        let metadata = XbfVecMetadata::new(primitive_metadata.into_base_metadata());
+        let elements = value
+            .iter()
+            .map(XbfPrimitive::from)
+            .map(XbfType::from)
+            .collect();
+        XbfVec::new_unchecked(metadata, elements)
+    }
+}
+
+impl<T> FromIterator<T> for XbfVec
+where
+    for<'a> XbfPrimitive: From<&'a T>,
+    XbfPrimitive: From<T>,
+    T: Default,
+{
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let primitive_metadata = XbfPrimitive::from(T::default()).get_metadata();
+        let metadata = XbfVecMetadata::new(primitive_metadata.into_base_metadata());
+        let elements = iter
+            .into_iter()
+            .map(XbfPrimitive::from)
+            .map(XbfType::from)
+            .collect();
+        XbfVec::new_unchecked(metadata, elements)
+    }
+}
+
+// TODO: asref for XbfVec?
+// TODO: borrow for XbfVec?
+// Borrow<T> has more requirements put on it than just asref, and I'm not sure if its possible to
+// satisfy those conditions, see https://doc.rust-lang.org/std/borrow/trait.Borrow.html
 
 /// Error type for [`XbfVec`]
 ///
