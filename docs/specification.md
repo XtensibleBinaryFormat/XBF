@@ -121,13 +121,6 @@ Strings should always be the final value in the list. The value given to strings
 is used by Vectors and Structs to determine what their discriminant value should
 be.
 
-REQUEST FOR REVIEW:
-
-Should we leave room between some of these discriminant numbers? For example,
-leave some space between U256 and I8? That way in the future if there's ever a
-need to expand new values can go in a place that logically makes sense, instead
-of being tacked on at the end.
-
 ### Vector
 
 A discriminant value should first be sent, similarly to primitives (following
