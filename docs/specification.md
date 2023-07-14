@@ -17,12 +17,7 @@ A homogenous list of values that has a known length.
 
 ### Struct
 
-An aggregate type containing a name as well as named fields.
-
-### Proposed Additional Inclusions
-
-This list can and should be expanded based on any new ideas we have. Possible
-candidates for inclusion include:
+An aggregate type containing a name as well as named fields. A struct **may not** contain duplicate field names. Should a Struct be sent like this anyway, it should be considered malformed and not be constructed on the receiving end.
 
 ## Direct Representations
 
