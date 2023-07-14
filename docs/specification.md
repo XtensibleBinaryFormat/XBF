@@ -24,24 +24,6 @@ An aggregate type containing a name as well as named fields.
 This list can and should be expanded based on any new ideas we have. Possible
 candidates for inclusion include:
 
-#### Char
-
-This is not the same as a U8. Taking inspiration from Rust's `char` type, it's a
-single Unicode Scalar Value:
-<https://www.unicode.org/glossary/#unicode_scalar_value>.
-
-Whether this is better than just sending a String of length one is to be
-determined.
-
-#### Optional Types
-
-It may be useful to add support for a field or type that may specifically
-contain nothing. This avoids the need to have a Void or Null type, and encodes
-directly in the type system when something may not be present. This seems most
-useful as a field within a Struct or an element in a Vector. Optional types are
-something that takes inspiration from Rust's type system, but it is also present
-within C++ as std::optional.
-
 ## Direct Representations
 
 ### Boolean
