@@ -3,13 +3,14 @@ use std::{
     error::Error,
     fmt::Display,
     io::{self, Read, Write},
+    rc::Rc,
 };
 
 /// A struct as defined by the XBF specification.
 #[derive(Debug, Clone, PartialEq)]
 pub struct XbfStruct {
-    metadata: XbfStructMetadata,
-    fields: Vec<XbfType>,
+    pub(crate) metadata: XbfStructMetadata,
+    fields: Rc<[XbfType]>,
 }
 
 impl XbfStruct {
@@ -85,6 +86,7 @@ impl XbfStruct {
                 ))?
             }
         }
+        let fields = fields.into();
         Ok(Self { metadata, fields })
     }
 
@@ -125,6 +127,7 @@ impl XbfStruct {
     /// assert_eq!(struct1.get(&field2_name), Some(&u64_field));
     /// ```
     pub fn new_unchecked(metadata: XbfStructMetadata, fields: Vec<XbfType>) -> Self {
+        let fields = fields.into();
         Self { metadata, fields }
     }
 
