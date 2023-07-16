@@ -89,7 +89,26 @@ void test_serde_vec_primitive(){
     // TODO:Add assertions for other vectors    
 }
 
+void test_serde_vec_metadata() {
+    // Serialization
+    VecMetadata vecMetadata(new VecMetadata(new PrimitiveMetadata(PrimitiveType::U16)));
+    stringstream ss;
+    boost::archive::text_oarchive oa(ss);
+    oa << vecMetadata;
 
+    // Display serialized data
+    dump(ss);
+
+    // Deserialization
+    boost::archive::text_iarchive ia(ss);
+    VecMetadata desVecMetadata;
+    ia >> desVecMetadata;
+
+    // Assertions
+    const Metadata* internalType = desVecMetadata.getInternalType();
+    assert(internalType != nullptr);
+    assert(internalType->getType() == PrimitiveType::U16);
+}
 
 void test_serde_primitives(){
     stringstream ss;
@@ -155,6 +174,9 @@ int main() {
    //test case for serde vec metadata when the vec has a primitive
    test_serde_vec_primitive();
    cout<<"completed serde vec metadata " << endl;
+
+   test_serde_vec_metadata();
+    cout << "completed serde vec metadata with internal type " << endl;
 
     return 0;
 }
