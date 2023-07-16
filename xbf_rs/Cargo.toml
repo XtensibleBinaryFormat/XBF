@@ -7,3 +7,4 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 byteorder = "1"
+indexmap = "2.0.0"

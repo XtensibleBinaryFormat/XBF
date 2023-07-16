@@ -270,8 +270,9 @@ impl XbfStruct {
     /// ```
     pub fn get(&self, field_name: &str) -> Option<&XbfType> {
         self.metadata
-            .get_field_index(field_name)
-            .map(|i| &self.fields[*i])
+            .fields
+            .get_index_of(field_name)
+            .map(|i| &self.fields[i])
     }
 }
 
