@@ -10,7 +10,7 @@ typedef int8_t i8;
 typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
-//typedef int128_t i128;
+//typedef int128_t i12this is rust.8;
 //typedef int256_t i256;
 typedef float f32;
 typedef double f64;

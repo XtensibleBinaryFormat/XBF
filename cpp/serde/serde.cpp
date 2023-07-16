@@ -54,6 +54,43 @@ BOOST_CLASS_EXPORT(PrimitiveMetadata)
 BOOST_CLASS_EXPORT(VecMetadata)
 BOOST_CLASS_EXPORT(StructMetadata)
 
+
+void test_serde_vec_primitive(){
+    vector<bool> boolVec{ true, false, true };
+    vector<u8> u8Vec{ 1, 2, 3 };
+    vector<u16> u16Vec{ 1000, 2000, 3000 };
+    vector<u32> u32Vec{ 1'000'000, 2'000'000, 3'000'000 };
+    vector<u64> u64Vec{ 8'000'000'000ULL, 9'000'000'000ULL, 10'000'000'000ULL };
+    // TODO: Add vectors for other primitive types
+
+    // Serialization
+    stringstream ss;
+    boost::archive::text_oarchive oa(ss);
+    oa << boolVec << u8Vec << u16Vec << u32Vec << u64Vec;
+    // TODO: Serialize other vectors
+
+    // Deserialization
+    boost::archive::text_iarchive ia(ss);
+    vector<bool> desBoolVec;
+    vector<u8> desU8Vec;
+    vector<u16> desU16Vec;
+    vector<u32> desU32Vec;
+    vector<u64> desU64Vec;
+    //TODO: Add vectors for other primitive types
+    ia >> desBoolVec >> desU8Vec >> desU16Vec >> desU32Vec >> desU64Vec;
+    //TODO: Deserialize other vectors
+
+    // Assertions
+    assert(boolVec == desBoolVec);
+    assert(u8Vec == desU8Vec);
+    assert(u16Vec == desU16Vec);
+    assert(u32Vec == desU32Vec);
+    assert(u64Vec == desU64Vec);
+    // TODO:Add assertions for other vectors    
+}
+
+
+
 void test_serde_primitives(){
     stringstream ss;
         boost::archive::text_oarchive oa(ss);
@@ -114,6 +151,10 @@ int main() {
    
    test_serde_primitives();
    cout<<"COMPLETED SERDE"<<endl;
+
+   //test case for serde vec metadata when the vec has a primitive
+   test_serde_vec_primitive();
+   cout<<"completed serde vec metadata " << endl;
 
     return 0;
 }

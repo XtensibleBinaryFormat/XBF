@@ -6,6 +6,7 @@
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
+#include <boost/dynamic_bitset.hpp>
 
 enum class PrimitiveType {
     Boolean,
@@ -112,3 +113,4 @@ private:
 
     std::map<std::string, const Metadata*> fields_;
 };
+
