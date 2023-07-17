@@ -86,6 +86,7 @@ impl XbfStruct {
                 ))?
             }
         }
+        let metadata = metadata.into();
         let fields = fields.into();
         Ok(Self { metadata, fields })
     }
@@ -127,6 +128,7 @@ impl XbfStruct {
     /// assert_eq!(struct1.get(&field2_name), Some(&u64_field));
     /// ```
     pub fn new_unchecked(metadata: XbfStructMetadata, fields: Vec<XbfType>) -> Self {
+        let metadata = metadata.into();
         let fields = fields.into();
         Self { metadata, fields }
     }

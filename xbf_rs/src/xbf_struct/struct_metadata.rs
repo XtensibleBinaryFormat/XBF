@@ -9,6 +9,7 @@ use std::{
     error::Error,
     fmt::Display,
     io::{self, Read, Write},
+    rc::Rc,
 };
 
 /// The metadata discriminant for a Struct type.
@@ -20,8 +21,8 @@ pub const STRUCT_METADATA_DISCRIMINANT: u8 = VEC_METADATA_DISCRIMINANT + 1;
 /// Metadata for a Struct type.
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct XbfStructMetadata {
-    name: String,
-    pub(super) fields: IndexMap<String, XbfMetadata>,
+    name: Rc<str>,
+    pub(super) fields: Rc<IndexMap<String, XbfMetadata>>,
 }
 
 impl XbfStructMetadata {
@@ -90,10 +91,10 @@ impl XbfStructMetadata {
             };
         }
 
-        Ok(Self {
-            name,
-            fields: fields_map,
-        })
+        let name = name.into();
+        let fields = fields_map.into();
+
+        Ok(Self { name, fields })
     }
 
     /// Creates a new [`XbfStructMetadata`] without checking for duplicate field names.
@@ -126,7 +127,8 @@ impl XbfStructMetadata {
     /// assert_eq!(metadata.get_field_type(field2_name), Some(&field2_type));
     /// ```
     pub fn new_unchecked(name: String, fields: Vec<(String, XbfMetadata)>) -> Self {
-        let fields = fields.into_iter().collect::<IndexMap<_, _>>();
+        let name = name.into();
+        let fields = fields.into_iter().collect::<IndexMap<_, _>>().into();
         Self { name, fields }
     }
 

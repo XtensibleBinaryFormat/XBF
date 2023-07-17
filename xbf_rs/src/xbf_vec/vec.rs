@@ -53,9 +53,9 @@ impl XbfVec {
         elements: Vec<XbfType>,
     ) -> Result<Self, ElementsNotHomogenousError> {
         let all_same_type = elements.iter().all(|x| *metadata.inner_type == x.into());
-        let elements = elements.into();
-        println!("{elements:?}");
         if all_same_type {
+            let metadata = metadata.into();
+            let elements = elements.into();
             Ok(Self { metadata, elements })
         } else {
             Err(ElementsNotHomogenousError)
@@ -83,6 +83,7 @@ impl XbfVec {
     /// assert_eq!(vec[1], XbfPrimitive::String("Hello".to_string()).into());
     /// ```
     pub fn new_unchecked(metadata: XbfVecMetadata, elements: Vec<XbfType>) -> Self {
+        let metadata = metadata.into();
         let elements = elements.into();
         Self { metadata, elements }
     }
@@ -158,9 +159,6 @@ impl XbfVec {
     }
 
     /// Returns the metadata of the vector.
-    ///
-    /// Getting the metadata returns an owned [`XbfVecMetadata`], which requires a clone to take
-    /// place. This will likely be changed in the future to be more efficient.
     ///
     /// # Examples
     ///
@@ -240,6 +238,18 @@ impl XbfVec {
     /// ```
     pub fn iter(&self) -> impl Iterator<Item = &XbfType> {
         self.elements.iter()
+    }
+
+    /// Returns the length of the vector.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use xbf_rs::XbfVec;
+    /// let x = XbfVec::from([1i32, 2, 4].as_slice());
+    /// assert_eq!(x.len(), 3);
+    /// ```
+    pub fn len(&self) -> u16 {
+        self.elements.len() as u16
     }
 }
 
@@ -552,5 +562,11 @@ mod tests {
         .unwrap();
 
         takes_an_xbftype_slice(vec.as_ref());
+    }
+
+    #[test]
+    fn len_works() {
+        let x = XbfVec::from([1i32, 2, 4].as_slice());
+        assert_eq!(x.len(), 3);
     }
 }
