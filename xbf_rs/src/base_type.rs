@@ -9,6 +9,27 @@ pub enum XbfType {
 }
 
 impl XbfType {
+    /// Serialize an [`XbfType`] as defined by thejXBF specification.
+    ///
+    /// This function **does not** write out the metadata of the type. If you want to write out the
+    /// metadata, convert this type to a [`XbfMetadata`] and call
+    /// [`XbfMetadata::serialize_base_metadata`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use xbf_rs::prelude::*;
+    /// use xbf_rs::XbfType;
+    ///
+    /// let x = 42i32.to_xbf_primitive().to_base_type();
+    ///
+    /// let mut writer = vec![];
+    /// x.serialize_base_type(&mut writer).unwrap();
+    ///
+    /// let mut expected = vec![];
+    /// expected.extend_from_slice(&42i32.to_le_bytes());
+    /// assert_eq!(writer, expected);
+    /// ```
     pub fn serialize_base_type(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
             XbfType::Primitive(x) => x.serialize_primitive_type(writer),
