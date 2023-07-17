@@ -9,6 +9,7 @@ use std::{
     error::Error,
     fmt::Display,
     io::{self, Read, Write},
+    rc::Rc,
 };
 
 /// The metadata discriminant for a Struct type.
@@ -21,7 +22,7 @@ pub const STRUCT_METADATA_DISCRIMINANT: u8 = VEC_METADATA_DISCRIMINANT + 1;
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct XbfStructMetadata {
     name: String,
-    pub(super) fields: Vec<(String, XbfMetadata)>,
+    pub(super) fields: Rc<[(String, XbfMetadata)]>,
     fields_lookup: HashMap<String, usize>,
 }
 
@@ -90,6 +91,7 @@ impl XbfStructMetadata {
             };
         }
 
+        let fields = fields.into();
         Ok(Self {
             name,
             fields,
@@ -133,6 +135,7 @@ impl XbfStructMetadata {
             .enumerate()
             .map(|(idx, (field, _))| (field, idx))
             .collect::<HashMap<_, usize>>();
+        let fields = fields.into();
         Self {
             name,
             fields,
