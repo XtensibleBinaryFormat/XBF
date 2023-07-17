@@ -4,12 +4,11 @@ use crate::{
     XbfMetadata, XbfStruct, VEC_METADATA_DISCRIMINANT,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use indexmap::{map::Entry, IndexMap};
 use std::{
-    collections::{hash_map::Entry, HashMap},
     error::Error,
     fmt::Display,
     io::{self, Read, Write},
-    rc::Rc,
 };
 
 /// The metadata discriminant for a Struct type.
@@ -22,8 +21,7 @@ pub const STRUCT_METADATA_DISCRIMINANT: u8 = VEC_METADATA_DISCRIMINANT + 1;
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct XbfStructMetadata {
     name: String,
-    pub(super) fields: Rc<[(String, XbfMetadata)]>,
-    fields_lookup: HashMap<String, usize>,
+    pub(super) fields: IndexMap<String, XbfMetadata>,
 }
 
 impl XbfStructMetadata {
@@ -73,29 +71,28 @@ impl XbfStructMetadata {
         name: String,
         fields: Vec<(String, XbfMetadata)>,
     ) -> Result<Self, StructMetadataDuplicateFieldError> {
-        let mut fields_lookup: HashMap<String, usize> = HashMap::new();
+        let mut fields_map: IndexMap<String, XbfMetadata> = IndexMap::new();
 
-        for (idx, (field, metadata)) in fields.iter().cloned().enumerate() {
-            match fields_lookup.entry(field) {
+        for (field_name, metadata) in fields {
+            match fields_map.entry(field_name) {
                 Entry::Occupied(o) => {
-                    let (dup_name, dup_idx) = o.remove_entry();
-                    let dup_field = &fields[dup_idx];
+                    let (dup_name, dup_metadata) = o.remove_entry();
 
                     Err(StructMetadataDuplicateFieldError::new(
                         &dup_name,
-                        &dup_field.1,
+                        &dup_metadata,
                         &metadata,
                     ))?
                 }
-                Entry::Vacant(v) => v.insert(idx),
+                Entry::Vacant(v) => {
+                    v.insert(metadata);
+                }
             };
         }
 
-        let fields = fields.into();
         Ok(Self {
             name,
-            fields,
-            fields_lookup,
+            fields: fields_map,
         })
     }
 
@@ -129,18 +126,8 @@ impl XbfStructMetadata {
     /// assert_eq!(metadata.get_field_type(field2_name), Some(&field2_type));
     /// ```
     pub fn new_unchecked(name: String, fields: Vec<(String, XbfMetadata)>) -> Self {
-        let fields_lookup = fields
-            .iter()
-            .cloned()
-            .enumerate()
-            .map(|(idx, (field, _))| (field, idx))
-            .collect::<HashMap<_, usize>>();
-        let fields = fields.into();
-        Self {
-            name,
-            fields,
-            fields_lookup,
-        }
+        let fields = fields.into_iter().collect::<IndexMap<_, _>>();
+        Self { name, fields }
     }
 
     /// Returns the name of the struct.
@@ -190,12 +177,13 @@ impl XbfStructMetadata {
     /// assert_eq!(metadata.get_field_type("b"), None);
     /// ```
     pub fn get_field_type(&self, field: &str) -> Option<&XbfMetadata> {
-        self.get_field_index(field).map(|i| &self.fields[*i].1)
+        self.fields.get(field)
+        // self.get_field_index(field).map(|i| &self.fields[*i].1)
     }
 
-    pub(crate) fn get_field_index(&self, field: &str) -> Option<&usize> {
-        self.fields_lookup.get(field)
-    }
+    // pub(crate) fn get_field_index(&self, field: &str) -> Option<&usize> {
+    //     self.fields_lookup.get(field)
+    // }
 
     /// Serialize a struct as defined by the XBF specification.
     ///
