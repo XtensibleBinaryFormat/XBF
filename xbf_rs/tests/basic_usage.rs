@@ -1,3 +1,4 @@
+use indexmap::indexmap;
 use serde::{Deserialize, Serialize};
 use xbf_rs::{
     prelude::*, XbfPrimitiveMetadata, XbfStruct, XbfStructMetadata, XbfVec, XbfVecMetadata,
@@ -28,18 +29,13 @@ fn basic_serialization() {
     // metadata for the struct
     let dragon_rider_metadata = XbfStructMetadata::new(
         "DragonRider".to_string(),
-        vec![
-            (
-                "Name".to_string(),
+        indexmap! {
+                "Name".to_string() =>
                 XbfPrimitiveMetadata::String.into_base_metadata(),
-            ),
-            (
-                "Age".to_string(),
+                "Age".to_string() =>
                 XbfPrimitiveMetadata::U16.into_base_metadata(),
-            ),
-        ],
-    )
-    .unwrap();
+        },
+    );
 
     // Make a native vec of XbfType, where the XbfType is an XbfStruct corresponding to the native
     // DragonRider struct

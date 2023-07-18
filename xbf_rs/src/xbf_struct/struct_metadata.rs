@@ -4,10 +4,8 @@ use crate::{
     XbfMetadata, XbfStruct, VEC_METADATA_DISCRIMINANT,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use indexmap::{map::Entry, IndexMap};
+use indexmap::IndexMap;
 use std::{
-    error::Error,
-    fmt::Display,
     io::{self, Read, Write},
     rc::Rc,
 };
@@ -26,11 +24,7 @@ pub struct XbfStructMetadata {
 }
 
 impl XbfStructMetadata {
-    /// Tries to create a new [`XbfStructMetadata`].
-    ///
-    /// # Errors
-    ///
-    /// If there are any duplicate field names, returns a [`StructMetadataDuplicateFieldError`].
+    /// Creates a new [`XbfStructMetadata`].
     ///
     /// # Examples
     ///
@@ -39,96 +33,25 @@ impl XbfStructMetadata {
     /// use xbf_rs::XbfPrimitiveMetadata;
     /// use xbf_rs::XbfMetadataUpcast;
     ///
+    /// use indexmap::indexmap;
+    ///
     /// let metadata = XbfStructMetadata::new(
     ///     "test_struct".to_string(),
-    ///     vec![
-    ///         ("a".to_string(), XbfPrimitiveMetadata::I32.into()),
-    ///         ("b".to_string(), XbfPrimitiveMetadata::U64.into()),
-    ///     ],
-    /// ).unwrap();
+    ///     indexmap!{
+    ///         "a".to_string() => XbfPrimitiveMetadata::I32.into(),
+    ///         "b".to_string() => XbfPrimitiveMetadata::U64.into(),
+    ///     },
+    /// );
     ///
     /// assert_eq!(metadata.name(), "test_struct");
     /// assert_eq!(metadata.get_field_type("a"), Some(&XbfPrimitiveMetadata::I32.into()));
     /// assert_eq!(metadata.get_field_type("b"), Some(&XbfPrimitiveMetadata::U64.into()));
     /// assert_eq!(metadata.get_field_type("c"), None);
-    ///
-    ///
-    /// let err = XbfStructMetadata::new(
-    ///     "test_struct".to_string(),
-    ///     vec![
-    ///         ("a".to_string(), XbfPrimitiveMetadata::I32.into()),
-    ///         ("a".to_string(), XbfPrimitiveMetadata::U64.into()),
-    ///     ]
-    /// ).unwrap_err();
-    ///
-    /// assert_eq!(err.to_string(), format!("Duplicate field: {}, type1: {:?}, type2: {:?}",
-    ///         "a",
-    ///         XbfPrimitiveMetadata::I32.to_base_metadata(),
-    ///         XbfPrimitiveMetadata::U64.to_base_metadata()
-    ///     )
-    /// );
     /// ```
-    pub fn new(
-        name: String,
-        fields: Vec<(String, XbfMetadata)>,
-    ) -> Result<Self, StructMetadataDuplicateFieldError> {
-        let mut fields_map: IndexMap<String, XbfMetadata> = IndexMap::new();
-
-        for (field_name, metadata) in fields {
-            match fields_map.entry(field_name) {
-                Entry::Occupied(o) => {
-                    let (dup_name, dup_metadata) = o.remove_entry();
-
-                    Err(StructMetadataDuplicateFieldError::new(
-                        &dup_name,
-                        &dup_metadata,
-                        &metadata,
-                    ))?
-                }
-                Entry::Vacant(v) => {
-                    v.insert(metadata);
-                }
-            };
-        }
-
+    pub fn new(name: String, fields: IndexMap<String, XbfMetadata>) -> Self {
         let name = name.into();
-        let fields = fields_map.into();
+        let fields = fields.into();
 
-        Ok(Self { name, fields })
-    }
-
-    /// Creates a new [`XbfStructMetadata`] without checking for duplicate field names.
-    ///
-    /// If you use this function you are proceeding at your own peril.
-    ///
-    /// # Examples
-    /// ```rust
-    /// use xbf_rs::prelude::*;
-    ///
-    /// use xbf_rs::XbfStructMetadata;
-    /// use xbf_rs::XbfPrimitiveMetadata;
-    ///
-    /// let name = "test_struct";
-    /// let field1_name = "a";
-    /// let field1_type = XbfPrimitiveMetadata::I32.into_base_metadata();
-    /// let field2_name = "b";
-    /// let field2_type = XbfPrimitiveMetadata::U64.into_base_metadata();
-    ///
-    /// let metadata = XbfStructMetadata::new_unchecked(
-    ///   name.to_string(),
-    ///   vec![
-    ///     (field1_name.to_string(), field1_type.clone()),
-    ///     (field2_name.to_string(), field2_type.clone()),
-    ///   ],
-    /// );
-    ///
-    /// assert_eq!(metadata.name(), name);
-    /// assert_eq!(metadata.get_field_type(field1_name), Some(&field1_type));
-    /// assert_eq!(metadata.get_field_type(field2_name), Some(&field2_type));
-    /// ```
-    pub fn new_unchecked(name: String, fields: Vec<(String, XbfMetadata)>) -> Self {
-        let name = name.into();
-        let fields = fields.into_iter().collect::<IndexMap<_, _>>().into();
         Self { name, fields }
     }
 
@@ -141,11 +64,13 @@ impl XbfStructMetadata {
     /// use xbf_rs::XbfStructMetadata;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
+    /// use indexmap::indexmap;
+    ///
     /// let name = "test_struct";
     ///
-    /// let metadata = XbfStructMetadata::new_unchecked(
+    /// let metadata = XbfStructMetadata::new(
     ///   name.to_string(),
-    ///   vec![],
+    ///   indexmap![],
     /// );
     ///
     /// assert_eq!(metadata.name(), name);
@@ -163,15 +88,17 @@ impl XbfStructMetadata {
     /// use xbf_rs::XbfStructMetadata;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
+    /// use indexmap::indexmap;
+    ///
     /// let name = "test_struct";
     /// let field1_name = "a";
     /// let field1_type = XbfPrimitiveMetadata::I32.into_base_metadata();
     ///
-    /// let metadata = XbfStructMetadata::new_unchecked(
+    /// let metadata = XbfStructMetadata::new(
     ///   name.to_string(),
-    ///   vec![
-    ///     (field1_name.to_string(), field1_type.clone()),
-    ///   ],
+    ///   indexmap!{
+    ///     field1_name.to_string() => field1_type.clone(),
+    ///   },
     /// );
     ///
     /// assert_eq!(metadata.name(), name);
@@ -198,15 +125,17 @@ impl XbfStructMetadata {
     /// use xbf_rs::XbfPrimitiveMetadata;
     /// use xbf_rs::STRUCT_METADATA_DISCRIMINANT;
     ///
+    /// use indexmap::indexmap;
+    ///
     /// let struct_name = "test_struct";
     /// let field1_name = "a";
     /// let field2_name = "b";
-    /// let metadata = XbfStructMetadata::new_unchecked(
+    /// let metadata = XbfStructMetadata::new(
     ///     struct_name.to_string(),
-    ///     vec![
-    ///         (field1_name.to_string(), XbfPrimitiveMetadata::I32.into()),
-    ///         (field2_name.to_string(), XbfPrimitiveMetadata::U64.into()),
-    ///     ],
+    ///     indexmap!{
+    ///         field1_name.to_string() => XbfPrimitiveMetadata::I32.into(),
+    ///         field2_name.to_string() => XbfPrimitiveMetadata::U64.into(),
+    ///     },
     /// );
     /// let mut writer = vec![];
     ///
@@ -251,6 +180,8 @@ impl XbfStructMetadata {
     /// use xbf_rs::XbfPrimitiveMetadata;
     /// use xbf_rs::STRUCT_METADATA_DISCRIMINANT;
     ///
+    /// use indexmap::indexmap;
+    ///
     /// let struct_name = "test_struct".to_string();
     /// let field1_name = "a".to_string();
     /// let field2_name = "b".to_string();
@@ -272,21 +203,21 @@ impl XbfStructMetadata {
     ///
     /// let metadata = XbfStructMetadata::deserialize_struct_metadata(&mut reader).unwrap();
     ///
-    /// assert_eq!(metadata, XbfStructMetadata::new_unchecked(struct_name, vec![
-    ///     (field1_name, XbfPrimitiveMetadata::I32.into()),
-    ///     (field2_name, XbfPrimitiveMetadata::U64.into()),
-    /// ]));
+    /// assert_eq!(metadata, XbfStructMetadata::new(struct_name, indexmap!{
+    ///     field1_name => XbfPrimitiveMetadata::I32.into(),
+    ///     field2_name => XbfPrimitiveMetadata::U64.into(),
+    /// }));
     pub fn deserialize_struct_metadata(reader: &mut impl Read) -> io::Result<XbfStructMetadata> {
         let name = read_string(reader)?;
         let len = reader.read_u16::<LittleEndian>()?;
-        let mut fields = Vec::with_capacity(len as usize);
+        let mut fields = IndexMap::with_capacity(len as usize);
         for _ in 0..len {
-            fields.push((
+            fields.insert(
                 read_string(reader)?,
                 XbfMetadata::deserialize_base_metadata(reader)?,
-            ))
+            );
         }
-        Ok(XbfStructMetadata::new_unchecked(name, fields))
+        Ok(XbfStructMetadata::new(name, fields))
     }
 }
 
@@ -298,30 +229,10 @@ impl From<&XbfStruct> for XbfStructMetadata {
     }
 }
 
-/// Error type for creating [`XbfStructMetadata`].
-///
-/// TODO: similar to [`StructFieldMismatchError`] should this contain the actual fields?
-#[derive(Debug)]
-pub struct StructMetadataDuplicateFieldError(String);
-
-impl StructMetadataDuplicateFieldError {
-    fn new(duplicate_field_name: &str, type1: &XbfMetadata, type2: &XbfMetadata) -> Self {
-        let s =
-            format!("Duplicate field: {duplicate_field_name}, type1: {type1:?}, type2: {type2:?}");
-        StructMetadataDuplicateFieldError(s)
-    }
-}
-
-impl Display for StructMetadataDuplicateFieldError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Error for StructMetadataDuplicateFieldError {}
-
 #[cfg(test)]
 mod tests {
+    use indexmap::indexmap;
+
     use super::*;
     use crate::{xbf_primitive::XbfPrimitiveMetadata, XbfVecMetadata};
     use std::io::Cursor;
@@ -330,12 +241,10 @@ mod tests {
     fn metadata_new_works() {
         let metadata = XbfStructMetadata::new(
             "test".to_string(),
-            vec![(
-                "a".to_string(),
-                XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
-            )],
-        )
-        .expect("a valid struct metadata");
+            indexmap! {
+                "a".to_string() => XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
+            },
+        );
 
         assert_eq!(metadata.name(), "test");
         assert_eq!(
@@ -345,51 +254,21 @@ mod tests {
     }
 
     #[test]
-    fn metadata_new_failure_works() {
-        let dup_field_name = "a";
-        let type1 = XbfMetadata::Primitive(XbfPrimitiveMetadata::I32);
-        let type2 = XbfMetadata::Primitive(XbfPrimitiveMetadata::String);
-        let metadata = XbfStructMetadata::new(
-            "test".to_string(),
-            vec![
-                (dup_field_name.to_string(), type1.clone()),
-                (dup_field_name.to_string(), type2.clone()),
-            ],
-        )
-        .expect_err("an invalid struct");
-
-        assert_eq!(
-            metadata.to_string(),
-            format!("Duplicate field: {dup_field_name}, type1: {type1:?}, type2: {type2:?}")
-        )
-    }
-
-    #[test]
     fn metadata_serde_works() {
         let metadata = XbfStructMetadata::new(
             "test".to_string(),
-            vec![
-                (
-                    "a".to_string(),
-                    XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
-                ),
-                (
-                    "b".to_string(),
-                    XbfMetadata::Vec(XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into())),
-                ),
-                (
-                    "c".to_string(),
-                    XbfMetadata::Struct(XbfStructMetadata::new_unchecked(
+            indexmap! {
+                    "a".to_string() => XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
+                    "b".to_string() => XbfMetadata::Vec(XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into())),
+                    "c".to_string() => XbfMetadata::Struct(XbfStructMetadata::new(
                         "inner".to_string(),
-                        vec![(
-                            "d".to_string(),
+                        indexmap! {
+                            "d".to_string( ) =>
                             XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
-                        )],
+                        },
                     )),
-                ),
-            ],
-        )
-        .expect("a valid struct metadata");
+            },
+        );
 
         let mut writer = Vec::new();
         metadata.serialize_struct_metadata(&mut writer).unwrap();
@@ -432,9 +311,8 @@ mod tests {
     fn upcast_works() {
         let struct_metadata = XbfStructMetadata::new(
             "test_struct".to_string(),
-            vec![("field1".to_string(), XbfPrimitiveMetadata::I32.into())],
-        )
-        .expect("a valid struct metadata");
+            indexmap! {"field1".to_string() => XbfPrimitiveMetadata::I32.into()},
+        );
         let struct_metadata_ref = &struct_metadata;
 
         assert_eq!(

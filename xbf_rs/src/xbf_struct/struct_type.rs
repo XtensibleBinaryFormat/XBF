@@ -30,6 +30,8 @@ impl XbfStruct {
     /// use xbf_rs::XbfStructMetadata;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
+    /// use indexmap::indexmap;
+    ///
     /// let name = "test_struct";
     /// let field1_name = "a";
     /// let field1_type = XbfPrimitiveMetadata::I32.into_base_metadata();
@@ -40,10 +42,10 @@ impl XbfStruct {
     /// let u64_field = 42u64.into_xbf_primitive().into_base_type();
     /// let i64_field = 42i64.into_xbf_primitive().into_base_type();
     ///
-    /// let metadata = XbfStructMetadata::new_unchecked(name.to_string(), vec![
-    ///     (field1_name.to_string(), field1_type),
-    ///     (field2_name.to_string(), field2_type.clone()),
-    /// ]);
+    /// let metadata = XbfStructMetadata::new(name.to_string(), indexmap!{
+    ///     field1_name.to_string() => field1_type,
+    ///     field2_name.to_string() => field2_type.clone(),
+    /// });
     ///
     /// let struct1 = XbfStruct::new(metadata.clone(), vec![
     ///     i32_field.clone(),
@@ -105,6 +107,8 @@ impl XbfStruct {
     /// use xbf_rs::XbfStructMetadata;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
+    /// use indexmap::indexmap;
+    ///
     /// let name = "test_struct";
     /// let field1_name = "a";
     /// let field1_type = XbfPrimitiveMetadata::I32.into_base_metadata();
@@ -114,10 +118,13 @@ impl XbfStruct {
     /// let i32_field = 42i32.into_xbf_primitive().into_base_type();
     /// let u64_field = 42u64.into_xbf_primitive().into_base_type();
     ///
-    /// let metadata = XbfStructMetadata::new_unchecked(name.to_string(), vec![
-    ///     (field1_name.to_string(), field1_type),
-    ///     (field2_name.to_string(), field2_type),
-    /// ]);
+    /// let metadata = XbfStructMetadata::new(
+    ///     name.to_string(),
+    ///     indexmap!{
+    ///         field1_name.to_string() => field1_type,
+    ///         field2_name.to_string() => field2_type,
+    ///     }
+    /// );
     ///
     /// let struct1 = XbfStruct::new_unchecked(metadata.clone(), vec![
     ///     i32_field.clone(),
@@ -147,13 +154,14 @@ impl XbfStruct {
     /// use xbf_rs::XbfPrimitive;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
+    /// use indexmap::indexmap;
+    ///
     /// let metadata = XbfStructMetadata::new(
     ///     "test_struct".to_string(),
-    ///     vec![(
-    ///         "a".to_string(),
-    ///         XbfPrimitiveMetadata::I32.into(),
-    ///     )],
-    /// ).expect("a valid struct metadata");
+    ///     indexmap!{
+    ///         "a".to_string() => XbfPrimitiveMetadata::I32.into(),
+    ///     },
+    /// );
     ///
     /// let val = XbfStruct::new(
     ///     metadata,
@@ -187,15 +195,19 @@ impl XbfStruct {
     /// use xbf_rs::XbfPrimitive;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
+    /// use indexmap::indexmap;
+    ///
     /// // setting up a reader with one i32 in it
     /// let mut reader = vec![];
     /// reader.extend_from_slice(&42i32.to_le_bytes());
     /// let mut reader = std::io::Cursor::new(reader);
     ///
     /// // the metadata we've gotten from somewhere describing the type
-    /// let metadata = XbfStructMetadata::new_unchecked(
+    /// let metadata = XbfStructMetadata::new(
     ///     "test_struct".to_string(),
-    ///     vec![("a".to_string(), XbfPrimitiveMetadata::I32.into())],
+    ///     indexmap!{
+    ///         "a".to_string() => XbfPrimitiveMetadata::I32.into()
+    ///     },
     /// );
     ///
     /// // deserializing the struct with the given metadata
@@ -227,12 +239,13 @@ impl XbfStruct {
     /// use xbf_rs::XbfPrimitive;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
-    /// let metadata = XbfStructMetadata::new_unchecked(
+    /// use indexmap::indexmap;
+    ///
+    /// let metadata = XbfStructMetadata::new(
     ///     "test_struct".to_string(),
-    ///      vec![(
-    ///         "a".to_string(),
-    ///         XbfPrimitiveMetadata::I32.into(),
-    ///     )],
+    ///      indexmap!{
+    ///         "a".to_string() => XbfPrimitiveMetadata::I32.into(),
+    ///     },
     /// );
     ///
     /// let val = XbfStruct::new_unchecked(
@@ -240,7 +253,7 @@ impl XbfStruct {
     ///     vec![XbfPrimitive::I32(42).into()],
     /// );
     ///
-    /// assert_eq!(metadata, val.get_metadata() )
+    /// assert_eq!(metadata, val.get_metadata())
     /// ```
     pub fn get_metadata(&self) -> XbfStructMetadata {
         self.metadata.clone()
@@ -257,13 +270,17 @@ impl XbfStruct {
     /// use xbf_rs::XbfStructMetadata;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
+    /// use indexmap::indexmap;
+    ///
     /// let field_name = "a";
     /// let field_data = 42i32.into_xbf_primitive().into_base_type();
     ///
     /// let s = XbfStruct::new_unchecked(
-    ///     XbfStructMetadata::new_unchecked(
+    ///     XbfStructMetadata::new(
     ///         "test_struct".to_string(),
-    ///         vec![(field_name.to_string(), XbfPrimitiveMetadata::I32.to_base_metadata())],
+    ///         indexmap!{
+    ///             field_name.to_string() => XbfPrimitiveMetadata::I32.to_base_metadata()
+    ///         },
     ///     ),
     ///     vec![field_data.clone()],
     /// );
@@ -310,6 +327,8 @@ impl Error for StructFieldMismatchError {}
 
 #[cfg(test)]
 mod tests {
+    use indexmap::indexmap;
+
     use super::*;
     use crate::{XbfMetadataUpcast, XbfPrimitive, XbfPrimitiveMetadata, XbfVec, XbfVecMetadata};
     use std::io::Cursor;
@@ -322,18 +341,13 @@ mod tests {
 
         let metadata = XbfStructMetadata::new(
             name.to_string(),
-            vec![
-                (
-                    field1_name.to_string(),
+            indexmap! {
+                    field1_name.to_string() =>
                     XbfPrimitiveMetadata::I32.into_base_metadata(),
-                ),
-                (
-                    field2_name.to_string(),
+                    field2_name.to_string() =>
                     XbfPrimitiveMetadata::U64.into_base_metadata(),
-                ),
-            ],
-        )
-        .expect("a valid struct metadata");
+            },
+        );
 
         let with_correct_fields = XbfStruct::new(
             metadata,
@@ -362,18 +376,13 @@ mod tests {
 
         let metadata = XbfStructMetadata::new(
             name.to_string(),
-            vec![
-                (
-                    field1_name.to_string(),
+            indexmap! {
+                    field1_name.to_string() =>
                     XbfPrimitiveMetadata::I32.into_base_metadata(),
-                ),
-                (
-                    field2_name.to_string(),
+                    field2_name.to_string() =>
                     XbfPrimitiveMetadata::U64.into_base_metadata(),
-                ),
-            ],
-        )
-        .expect("a valid struct metadata");
+            },
+        );
 
         let with_wrong_field1_type = XbfStruct::new(
             metadata,
@@ -402,18 +411,13 @@ mod tests {
 
         let metadata = XbfStructMetadata::new(
             name.to_string(),
-            vec![
-                (
-                    field1_name.to_string(),
+            indexmap! {
+                    field1_name.to_string() =>
                     XbfPrimitiveMetadata::String.into_base_metadata(),
-                ),
-                (
-                    field2_name.to_string(),
+                    field2_name.to_string() =>
                     XbfPrimitiveMetadata::Bytes.into_base_metadata(),
-                ),
-            ],
-        )
-        .expect("a valid struct metadata");
+            },
+        );
 
         let blatantly_wrong_fields = XbfStruct::new_unchecked(
             metadata,
@@ -439,21 +443,19 @@ mod tests {
         let vec_metadata = XbfMetadata::Vec(XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into()));
         let inner_struct_metadata = XbfStructMetadata::new(
             "test_struct".to_string(),
-            vec![(
-                "a".to_string(),
+            indexmap! {
+                "a".to_string() =>
                 XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
-            )],
-        )
-        .expect("a valid struct metadata");
+            },
+        );
         let outer_metadata = XbfStructMetadata::new(
             "test".to_string(),
-            vec![
-                ("a".to_string(), primitive_metadata),
-                ("b".to_string(), vec_metadata),
-                ("c".to_string(), inner_struct_metadata.to_base_metadata()),
-            ],
-        )
-        .expect("a valid struct metadata");
+            indexmap! {
+                "a".to_string()=> primitive_metadata,
+                "b".to_string()=> vec_metadata,
+                "c".to_string()=> inner_struct_metadata.to_base_metadata(),
+            },
+        );
 
         let primitive = XbfPrimitive::I32(42);
         let vec = XbfVec::new_unchecked(
@@ -493,9 +495,8 @@ mod tests {
     fn upcast_works() {
         let metadata = XbfStructMetadata::new(
             "my_struct".to_string(),
-            vec![("field1".to_string(), XbfPrimitiveMetadata::I32.into())],
-        )
-        .expect("a valid struct metadata");
+            indexmap! {"field1".to_string() => XbfPrimitiveMetadata::I32.into()},
+        );
         let my_struct =
             XbfStruct::new(metadata, vec![XbfPrimitive::I32(42).into()]).expect("a valid struct");
         let struct_ref = &my_struct;
