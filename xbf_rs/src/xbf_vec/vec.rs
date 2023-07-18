@@ -54,7 +54,6 @@ impl XbfVec {
     ) -> Result<Self, ElementsNotHomogenousError> {
         let all_same_type = elements.iter().all(|x| *metadata.inner_type == x.into());
         if all_same_type {
-            let metadata = metadata.into();
             let elements = elements.into();
             Ok(Self { metadata, elements })
         } else {
@@ -83,7 +82,6 @@ impl XbfVec {
     /// assert_eq!(vec[1], XbfPrimitive::String("Hello".to_string()).into());
     /// ```
     pub fn new_unchecked(metadata: XbfVecMetadata, elements: Vec<XbfType>) -> Self {
-        let metadata = metadata.into();
         let elements = elements.into();
         Self { metadata, elements }
     }
@@ -243,6 +241,7 @@ impl XbfVec {
     /// Returns the length of the vector.
     ///
     /// # Examples
+    ///
     /// ```rust
     /// use xbf_rs::XbfVec;
     /// let x = XbfVec::from([1i32, 2, 4].as_slice());
@@ -250,6 +249,25 @@ impl XbfVec {
     /// ```
     pub fn len(&self) -> u16 {
         self.elements.len() as u16
+    }
+
+    /// Returns whether the vector is empty.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use xbf_rs::XbfVec;
+    /// use xbf_rs::XbfType;
+    ///
+    /// let x = XbfVec::from([1i32, 2, 4].as_slice());
+    ///
+    /// let empty_arr: [i32; 0] = [];
+    /// let y = XbfVec::from(empty_arr.as_slice());
+    ///
+    /// assert_eq!(x.is_empty(), false);
+    /// assert_eq!(y.is_empty(), true);
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.elements.is_empty()
     }
 }
 
@@ -568,5 +586,16 @@ mod tests {
     fn len_works() {
         let x = XbfVec::from([1i32, 2, 4].as_slice());
         assert_eq!(x.len(), 3);
+    }
+
+    #[test]
+    fn is_empty_works() {
+        let x = XbfVec::from([1i32, 2, 4].as_slice());
+
+        let empty_arr: [i32; 0] = [];
+        let y = XbfVec::from(empty_arr.as_slice());
+
+        assert_eq!(x.is_empty(), false);
+        assert_eq!(y.is_empty(), true);
     }
 }
