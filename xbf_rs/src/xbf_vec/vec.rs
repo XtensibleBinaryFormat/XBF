@@ -559,15 +559,14 @@ mod tests {
     #[test]
     fn upcast_works() {
         let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
-        let vec = XbfVec::new(
-            metadata.clone(),
-            vec![XbfType::Primitive(XbfPrimitive::I32(42))],
-        )
-        .unwrap();
+        let vec = XbfVec::new(metadata, vec![XbfType::Primitive(XbfPrimitive::I32(42))]).unwrap();
         let vec_ref = &vec;
+        let expected = XbfType::Vec(vec.clone());
 
-        assert_eq!(XbfType::Vec(vec.clone()), vec_ref.to_base_type());
-        assert_eq!(XbfType::Vec(vec.clone()), vec.into_base_type());
+        assert_eq!(expected, vec_ref.into());
+        assert_eq!(expected, vec_ref.to_base_type());
+        assert_eq!(expected, vec.clone().into());
+        assert_eq!(expected, vec.into_base_type());
     }
 
     #[test]

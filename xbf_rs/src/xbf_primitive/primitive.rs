@@ -418,15 +418,12 @@ mod tests {
     fn upcast_works() {
         let primitive_type = XbfPrimitive::I32(69);
         let ref_primitive_type = &primitive_type;
+        let expected = XbfType::Primitive(primitive_type.clone());
 
-        assert_eq!(
-            XbfType::Primitive(primitive_type.clone()),
-            ref_primitive_type.to_base_type() // ref_primitive_type.to_base_type()
-        );
-        assert_eq!(
-            XbfType::Primitive(primitive_type.clone()),
-            primitive_type.into_base_type()
-        );
+        assert_eq!(expected, ref_primitive_type.into());
+        assert_eq!(expected, ref_primitive_type.to_base_type());
+        assert_eq!(expected, primitive_type.clone().into());
+        assert_eq!(expected, primitive_type.into_base_type());
     }
 
     macro_rules! from_native_test {

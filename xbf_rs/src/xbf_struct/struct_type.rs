@@ -56,10 +56,10 @@ impl XbfStruct {
     /// assert_eq!(struct1.get("a"), Some(&i32_field));
     /// assert_eq!(struct1.get("b"), Some(&u64_field));
     ///
-    /// let struct2 = XbfStruct::new(metadata, vec![
-    ///     i32_field,
+    /// let struct2 = XbfStruct::new(metadata.clone(), vec![
+    ///     i32_field.clone(),
     ///     i64_field,
-    /// ]).expect_err("a invalid struct");
+    /// ]).expect_err("an invalid struct");
     ///
     /// let expected_err_message = format!("Provided value for field {field2_name} \
     ///     is of type {:?}, expected {field2_type:?}",
@@ -67,27 +67,35 @@ impl XbfStruct {
     /// );
     ///
     /// assert_eq!(struct2.to_string(), expected_err_message);
-    ///```
-    pub fn new(
-        metadata: XbfStructMetadata,
-        fields: Vec<XbfType>,
-    ) -> Result<Self, StructFieldMismatchError> {
-        // TODO: should there be a check for the same length?
-        // zip will go until either of them returns None, so it'll be as long as the shortest
-        // this might confuse somebody if they provided extra fields in fields but don't see them
-        // show up when printing the struct
-        // this could just be an additional error type that is returned when the lengths don't
-        // match up?
+    ///
+    /// let struct3 = XbfStruct::new(metadata, vec![i32_field]).expect_err("an invalid struct");
+    ///
+    /// let expected_err_message = "Provided fields have length: 1, expected: 2".to_string();
+    ///
+    /// assert_eq!(struct3.to_string(), expected_err_message);
+    /// ```
+    pub fn new(metadata: XbfStructMetadata, fields: Vec<XbfType>) -> Result<Self, StructError> {
+        let given_fields_len = fields.len();
+        let metadata_fields_len = metadata.fields.len();
+
+        if given_fields_len != metadata_fields_len {
+            Err(StructError::DifferentLengths {
+                metadata_len: metadata_fields_len,
+                fields_len: given_fields_len,
+            })?
+        }
+
         for ((name, expected_field_type), val) in metadata.fields.iter().zip(fields.iter()) {
             let actual_field_type = XbfMetadata::from(val);
             if *expected_field_type != actual_field_type {
-                Err(StructFieldMismatchError::new(
-                    name,
-                    expected_field_type,
-                    &actual_field_type,
-                ))?
+                Err(StructError::FieldMismatch {
+                    field_name: name.to_string(),
+                    expected_field_type: expected_field_type.clone(),
+                    actual_field_type,
+                })?
             }
         }
+
         let fields = fields.into();
         Ok(Self { metadata, fields })
     }
@@ -303,33 +311,45 @@ impl XbfTypeUpcast for XbfStruct {
     }
 }
 
-/// Error type for creating [`XbfStruct`].
-///
-/// TODO: should this struct contain the values instead of a string, and allow the user to access
-/// them via functions or something like that?
+/// Error type for creating an [`XbfStruct`].
 #[derive(Debug)]
-pub struct StructFieldMismatchError(String);
-
-impl StructFieldMismatchError {
-    fn new(
-        field_name: &str,
-        expected_field_type: &XbfMetadata,
-        actual_field_type: &XbfMetadata,
-    ) -> StructFieldMismatchError {
-        StructFieldMismatchError(format!(
-            "Provided value for field {field_name} is of \
-            type {actual_field_type:?}, expected {expected_field_type:?}"
-        ))
-    }
+pub enum StructError {
+    FieldMismatch {
+        field_name: String,
+        expected_field_type: XbfMetadata,
+        actual_field_type: XbfMetadata,
+    },
+    DifferentLengths {
+        metadata_len: usize,
+        fields_len: usize,
+    },
 }
 
-impl Display for StructFieldMismatchError {
+impl Display for StructError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        match self {
+            StructError::FieldMismatch {
+                field_name,
+                expected_field_type,
+                actual_field_type,
+            } => write!(
+                f,
+                "Provided value for field {field_name} is of type {actual_field_type:?}, \
+                expected {expected_field_type:?}"
+            ),
+
+            StructError::DifferentLengths {
+                metadata_len,
+                fields_len,
+            } => write!(
+                f,
+                "Provided fields have length: {fields_len}, expected: {metadata_len}"
+            ),
+        }
     }
 }
 
-impl Error for StructFieldMismatchError {}
+impl Error for StructError {}
 
 #[cfg(test)]
 mod tests {
@@ -348,10 +368,8 @@ mod tests {
         let metadata = XbfStructMetadata::new(
             name.to_string(),
             indexmap! {
-                    field1_name.to_string() =>
-                    XbfPrimitiveMetadata::I32.into_base_metadata(),
-                    field2_name.to_string() =>
-                    XbfPrimitiveMetadata::U64.into_base_metadata(),
+                field1_name.to_string() => XbfPrimitiveMetadata::I32.into_base_metadata(),
+                field2_name.to_string() => XbfPrimitiveMetadata::U64.into_base_metadata(),
             },
         );
 
@@ -383,15 +401,13 @@ mod tests {
         let metadata = XbfStructMetadata::new(
             name.to_string(),
             indexmap! {
-                    field1_name.to_string() =>
-                    XbfPrimitiveMetadata::I32.into_base_metadata(),
-                    field2_name.to_string() =>
-                    XbfPrimitiveMetadata::U64.into_base_metadata(),
+                field1_name.to_string() => XbfPrimitiveMetadata::I32.into_base_metadata(),
+                field2_name.to_string() => XbfPrimitiveMetadata::U64.into_base_metadata(),
             },
         );
 
         let with_wrong_field1_type = XbfStruct::new(
-            metadata,
+            metadata.clone(),
             vec![
                 XbfPrimitive::String("hi".to_string()).into_base_type(),
                 XbfPrimitive::U64(69).into_base_type(),
@@ -400,13 +416,25 @@ mod tests {
 
         assert_eq!(
             with_wrong_field1_type.unwrap_err().to_string(),
-            StructFieldMismatchError::new(
-                field1_name,
-                &XbfPrimitiveMetadata::I32.into_base_metadata(),
-                &XbfPrimitiveMetadata::String.into_base_metadata()
-            )
+            StructError::FieldMismatch {
+                field_name: field1_name.to_string(),
+                expected_field_type: XbfPrimitiveMetadata::I32.into_base_metadata(),
+                actual_field_type: XbfPrimitiveMetadata::String.into_base_metadata()
+            }
             .to_string()
         );
+
+        let wrong_number_of_fields =
+            XbfStruct::new(metadata, vec![XbfPrimitive::I32(69).into_base_type()]);
+
+        assert_eq!(
+            wrong_number_of_fields.unwrap_err().to_string(),
+            StructError::DifferentLengths {
+                metadata_len: 2,
+                fields_len: 1
+            }
+            .to_string()
+        )
     }
 
     #[test]
@@ -506,14 +534,11 @@ mod tests {
         let my_struct =
             XbfStruct::new(metadata, vec![XbfPrimitive::I32(42).into()]).expect("a valid struct");
         let struct_ref = &my_struct;
+        let expected = XbfType::Struct(my_struct.clone());
 
-        assert_eq!(
-            XbfType::Struct(my_struct.clone()),
-            struct_ref.to_base_type()
-        );
-        assert_eq!(
-            XbfType::Struct(my_struct.clone()),
-            my_struct.into_base_type()
-        );
+        assert_eq!(expected, struct_ref.into());
+        assert_eq!(expected, struct_ref.to_base_type());
+        assert_eq!(expected, my_struct.clone().into());
+        assert_eq!(expected, my_struct.into_base_type());
     }
 }
