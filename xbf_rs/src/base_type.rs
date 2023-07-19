@@ -56,48 +56,41 @@ impl XbfType {
 
 impl From<XbfPrimitive> for XbfType {
     fn from(value: XbfPrimitive) -> Self {
-        XbfType::Primitive(value)
+        value.into_base_type()
     }
 }
 
 impl From<&XbfPrimitive> for XbfType {
     fn from(value: &XbfPrimitive) -> Self {
-        XbfType::Primitive(value.clone())
+        value.to_base_type()
     }
 }
 
 impl From<XbfVec> for XbfType {
     fn from(value: XbfVec) -> Self {
-        XbfType::Vec(value)
+        value.into_base_type()
     }
 }
 
 impl From<&XbfVec> for XbfType {
     fn from(value: &XbfVec) -> Self {
-        XbfType::Vec(value.clone())
+        value.to_base_type()
     }
 }
 
 impl From<XbfStruct> for XbfType {
     fn from(value: XbfStruct) -> Self {
-        XbfType::Struct(value)
+        value.into_base_type()
     }
 }
 
 impl From<&XbfStruct> for XbfType {
     fn from(value: &XbfStruct) -> Self {
-        XbfType::Struct(value.clone())
+        value.to_base_type()
     }
 }
 
-pub trait XbfTypeUpcast: Into<XbfType>
-where
-    XbfType: for<'a> From<&'a Self>,
-{
-    fn into_base_type(self) -> XbfType {
-        self.into()
-    }
-    fn to_base_type(&self) -> XbfType {
-        self.into()
-    }
+pub trait XbfTypeUpcast {
+    fn into_base_type(self) -> XbfType;
+    fn to_base_type(&self) -> XbfType;
 }

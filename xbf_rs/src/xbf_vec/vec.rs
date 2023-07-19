@@ -300,15 +300,15 @@ impl<'a> IntoIterator for &'a XbfVec {
 
 impl<T> From<&[T]> for XbfVec
 where
-    for<'a> XbfPrimitive: From<&'a T>,
     XbfPrimitive: From<T>,
-    T: Default,
+    T: Default + Clone,
 {
     fn from(value: &[T]) -> Self {
         let primitive_metadata = XbfPrimitive::from(T::default()).get_metadata();
         let metadata = XbfVecMetadata::new(primitive_metadata.into_base_metadata());
         let elements = value
             .iter()
+            .cloned()
             .map(|x| XbfPrimitive::from(x).into_base_type())
             .collect();
         XbfVec::new_unchecked(metadata, elements)
@@ -317,7 +317,6 @@ where
 
 impl<T> FromIterator<T> for XbfVec
 where
-    for<'a> XbfPrimitive: From<&'a T>,
     XbfPrimitive: From<T>,
     T: Default,
 {
@@ -336,11 +335,18 @@ where
 ///
 /// In the future this may include information about what element wasn't
 /// the same type as the metadata.
-/// TODO: more error information?
 #[derive(Debug, PartialEq, Eq)]
 pub struct ElementsNotHomogenousError;
 
-impl XbfTypeUpcast for XbfVec {}
+impl XbfTypeUpcast for XbfVec {
+    fn into_base_type(self) -> XbfType {
+        XbfType::Vec(self)
+    }
+
+    fn to_base_type(&self) -> XbfType {
+        XbfType::Vec(self.clone())
+    }
+}
 
 #[cfg(test)]
 mod tests {

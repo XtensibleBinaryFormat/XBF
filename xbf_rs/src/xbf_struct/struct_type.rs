@@ -293,7 +293,15 @@ impl XbfStruct {
     }
 }
 
-impl XbfTypeUpcast for XbfStruct {}
+impl XbfTypeUpcast for XbfStruct {
+    fn into_base_type(self) -> XbfType {
+        XbfType::Struct(self)
+    }
+
+    fn to_base_type(&self) -> XbfType {
+        XbfType::Struct(self.clone())
+    }
+}
 
 /// Error type for creating [`XbfStruct`].
 ///

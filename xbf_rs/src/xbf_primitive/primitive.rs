@@ -1,6 +1,6 @@
 use crate::{
     util::{read_bytes, read_string, write_bytes, write_string},
-    XbfPrimitiveMetadata, XbfTypeUpcast,
+    XbfPrimitiveMetadata, XbfType, XbfTypeUpcast,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
@@ -154,7 +154,15 @@ impl XbfPrimitive {
     }
 }
 
-impl XbfTypeUpcast for XbfPrimitive {}
+impl XbfTypeUpcast for XbfPrimitive {
+    fn into_base_type(self) -> XbfType {
+        XbfType::Primitive(self)
+    }
+
+    fn to_base_type(&self) -> XbfType {
+        XbfType::Primitive(self.clone())
+    }
+}
 
 // TODO: Seal this trait so that nobody can implement it
 // TODO: Are the names of the provided methods correct?

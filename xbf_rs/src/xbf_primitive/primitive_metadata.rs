@@ -42,8 +42,6 @@ impl XbfPrimitiveMetadata {
     pub fn serialize_primitive_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_u8(*self as u8)
     }
-
-    // TODO: should there be a deserialize_primitive_metadata that wraps the TryFrom impl?
 }
 
 impl TryFrom<u8> for XbfPrimitiveMetadata {
