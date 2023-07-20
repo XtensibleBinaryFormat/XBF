@@ -42,37 +42,37 @@ impl XbfMetadata {
 
 impl From<XbfPrimitiveMetadata> for XbfMetadata {
     fn from(value: XbfPrimitiveMetadata) -> Self {
-        XbfMetadata::Primitive(value)
+        value.into_base_metadata()
     }
 }
 
 impl From<&XbfPrimitiveMetadata> for XbfMetadata {
     fn from(value: &XbfPrimitiveMetadata) -> Self {
-        XbfMetadata::Primitive(*value)
+        value.to_base_metadata()
     }
 }
 
 impl From<XbfVecMetadata> for XbfMetadata {
     fn from(value: XbfVecMetadata) -> Self {
-        XbfMetadata::Vec(value)
+        value.into_base_metadata()
     }
 }
 
 impl From<&XbfVecMetadata> for XbfMetadata {
     fn from(value: &XbfVecMetadata) -> Self {
-        XbfMetadata::Vec(value.clone())
+        value.to_base_metadata()
     }
 }
 
 impl From<XbfStructMetadata> for XbfMetadata {
     fn from(value: XbfStructMetadata) -> Self {
-        XbfMetadata::Struct(value)
+        value.into_base_metadata()
     }
 }
 
 impl From<&XbfStructMetadata> for XbfMetadata {
     fn from(value: &XbfStructMetadata) -> Self {
-        XbfMetadata::Struct(value.clone())
+        value.to_base_metadata()
     }
 }
 
@@ -86,16 +86,19 @@ impl From<&XbfType> for XbfMetadata {
     }
 }
 
-pub trait XbfMetadataUpcast: Into<XbfMetadata>
-where
-    XbfMetadata: for<'a> From<&'a Self>,
-{
-    fn into_base_metadata(self) -> XbfMetadata {
-        self.into()
-    }
-    fn to_base_metadata(&self) -> XbfMetadata {
-        self.into()
-    }
+pub trait XbfMetadataUpcast: private::Sealed {
+    fn into_base_metadata(self) -> XbfMetadata;
+    fn to_base_metadata(&self) -> XbfMetadata;
+}
+
+mod private {
+    use crate::{XbfPrimitiveMetadata, XbfStructMetadata, XbfVecMetadata};
+
+    pub trait Sealed {}
+
+    impl Sealed for XbfPrimitiveMetadata {}
+    impl Sealed for XbfVecMetadata {}
+    impl Sealed for XbfStructMetadata {}
 }
 
 #[cfg(test)]

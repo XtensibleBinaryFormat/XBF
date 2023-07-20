@@ -88,11 +88,19 @@ impl XbfVecMetadata {
     }
 }
 
-impl XbfMetadataUpcast for XbfVecMetadata {}
-
 impl From<&XbfVec> for XbfVecMetadata {
     fn from(value: &XbfVec) -> Self {
         value.get_metadata()
+    }
+}
+
+impl XbfMetadataUpcast for XbfVecMetadata {
+    fn into_base_metadata(self) -> XbfMetadata {
+        XbfMetadata::Vec(self)
+    }
+
+    fn to_base_metadata(&self) -> XbfMetadata {
+        XbfMetadata::Vec(self.clone())
     }
 }
 

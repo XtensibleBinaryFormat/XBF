@@ -1,4 +1,4 @@
-use crate::{XbfMetadataUpcast, XbfPrimitive};
+use crate::{XbfMetadata, XbfMetadataUpcast, XbfPrimitive};
 use byteorder::WriteBytesExt;
 use std::io::{self, Write};
 
@@ -74,7 +74,15 @@ impl TryFrom<u8> for XbfPrimitiveMetadata {
     }
 }
 
-impl XbfMetadataUpcast for XbfPrimitiveMetadata {}
+impl XbfMetadataUpcast for XbfPrimitiveMetadata {
+    fn into_base_metadata(self) -> crate::XbfMetadata {
+        XbfMetadata::Primitive(self)
+    }
+
+    fn to_base_metadata(&self) -> crate::XbfMetadata {
+        XbfMetadata::Primitive(*self)
+    }
+}
 
 impl From<&XbfPrimitive> for XbfPrimitiveMetadata {
     fn from(x: &XbfPrimitive) -> Self {

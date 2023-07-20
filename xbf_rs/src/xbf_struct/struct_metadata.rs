@@ -221,11 +221,19 @@ impl XbfStructMetadata {
     }
 }
 
-impl XbfMetadataUpcast for XbfStructMetadata {}
-
 impl From<&XbfStruct> for XbfStructMetadata {
     fn from(value: &XbfStruct) -> Self {
         value.get_metadata()
+    }
+}
+
+impl XbfMetadataUpcast for XbfStructMetadata {
+    fn into_base_metadata(self) -> XbfMetadata {
+        XbfMetadata::Struct(self)
+    }
+
+    fn to_base_metadata(&self) -> XbfMetadata {
+        XbfMetadata::Struct(self.clone())
     }
 }
 

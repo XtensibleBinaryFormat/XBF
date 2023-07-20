@@ -90,7 +90,17 @@ impl From<&XbfStruct> for XbfType {
     }
 }
 
-pub trait XbfTypeUpcast {
+pub trait XbfTypeUpcast: private::Sealed {
     fn into_base_type(self) -> XbfType;
     fn to_base_type(&self) -> XbfType;
+}
+
+mod private {
+    use crate::{XbfPrimitive, XbfStruct, XbfVec};
+
+    pub trait Sealed {}
+
+    impl Sealed for XbfPrimitive {}
+    impl Sealed for XbfVec {}
+    impl Sealed for XbfStruct {}
 }
