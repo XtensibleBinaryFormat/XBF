@@ -437,8 +437,13 @@ mod tests {
     macro_rules! from_native_test {
         ($ty:ty, $xbf_type:tt, $test_num:expr) => {
             let value: $ty = $test_num;
-            let primitive: XbfPrimitive = value.clone().into();
-            assert_eq!(primitive, XbfPrimitive::$xbf_type(value));
+            let ref_value = &value;
+            let expected = XbfPrimitive::$xbf_type(value.clone());
+
+            assert_eq!(expected, ref_value.into());
+            assert_eq!(expected, ref_value.to_xbf_primitive());
+            assert_eq!(expected, value.clone().into());
+            assert_eq!(expected, value.into_xbf_primitive());
         };
     }
 
