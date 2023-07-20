@@ -176,4 +176,38 @@ mod tests {
         assert_eq!(err.kind(), io::ErrorKind::InvalidData);
         assert_eq!(err.to_string(), "invalid primitive metadata");
     }
+
+    macro_rules! primitive_metadata_from_primitive_test {
+        ($xbf_type:tt, $test_val:expr) => {
+            assert_eq!(
+                XbfPrimitiveMetadata::from(&XbfPrimitive::$xbf_type($test_val)),
+                XbfPrimitiveMetadata::$xbf_type
+            );
+            assert_eq!(
+                XbfPrimitive::$xbf_type($test_val).get_metadata(),
+                XbfPrimitiveMetadata::$xbf_type
+            );
+        };
+    }
+
+    #[test]
+    fn primitve_metadata_from_primitive_works() {
+        primitive_metadata_from_primitive_test!(Bool, true);
+        primitive_metadata_from_primitive_test!(U8, 1);
+        primitive_metadata_from_primitive_test!(U16, 1);
+        primitive_metadata_from_primitive_test!(U32, 1);
+        primitive_metadata_from_primitive_test!(U64, 1);
+        primitive_metadata_from_primitive_test!(U128, 1);
+        primitive_metadata_from_primitive_test!(U256, [1, 2, 3, 4]);
+        primitive_metadata_from_primitive_test!(I8, 1);
+        primitive_metadata_from_primitive_test!(I16, 1);
+        primitive_metadata_from_primitive_test!(I32, 1);
+        primitive_metadata_from_primitive_test!(I64, 1);
+        primitive_metadata_from_primitive_test!(I128, 1);
+        primitive_metadata_from_primitive_test!(I256, [1, 2, 3, 4]);
+        primitive_metadata_from_primitive_test!(F32, 1.0);
+        primitive_metadata_from_primitive_test!(F64, 1.0);
+        primitive_metadata_from_primitive_test!(Bytes, vec![1, 2, 3, 4]);
+        primitive_metadata_from_primitive_test!(String, "Hello World".to_string());
+    }
 }
