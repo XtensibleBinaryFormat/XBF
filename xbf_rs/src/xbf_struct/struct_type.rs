@@ -75,14 +75,16 @@ impl XbfStruct {
     /// assert_eq!(struct3.to_string(), expected_err_message);
     /// ```
     pub fn new(metadata: XbfStructMetadata, fields: Vec<XbfType>) -> Result<Self, StructError> {
-        let given_fields_len = fields.len();
-        let metadata_fields_len = metadata.fields.len();
+        {
+            let given_fields_len = fields.len();
+            let metadata_fields_len = metadata.fields.len();
 
-        if given_fields_len != metadata_fields_len {
-            Err(StructError::DifferentLengths {
-                metadata_len: metadata_fields_len,
-                fields_len: given_fields_len,
-            })?
+            if given_fields_len != metadata_fields_len {
+                Err(StructError::DifferentLengths {
+                    metadata_len: metadata_fields_len,
+                    fields_len: given_fields_len,
+                })?
+            }
         }
 
         for ((name, expected_field_type), val) in metadata.fields.iter().zip(fields.iter()) {
