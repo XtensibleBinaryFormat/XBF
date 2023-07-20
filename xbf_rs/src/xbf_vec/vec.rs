@@ -3,16 +3,16 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::{
     default::Default,
     io::{self, Read, Write},
-    ops::Index,
-    rc::Rc,
-    slice::{Iter, SliceIndex},
+    ops::{Deref, DerefMut},
+    slice::{Iter, IterMut},
+    vec::IntoIter,
 };
 
 /// A vector type as defined by the XBF specification.
 #[derive(Debug, Clone, PartialEq)]
 pub struct XbfVec {
     pub(crate) metadata: XbfVecMetadata,
-    elements: Rc<[XbfType]>,
+    elements: Vec<XbfType>,
 }
 
 impl XbfVec {
@@ -54,7 +54,6 @@ impl XbfVec {
     ) -> Result<Self, ElementsNotHomogenousError> {
         let all_same_type = elements.iter().all(|x| *metadata.inner_type == x.into());
         if all_same_type {
-            let elements = elements.into();
             Ok(Self { metadata, elements })
         } else {
             Err(ElementsNotHomogenousError)
@@ -82,7 +81,6 @@ impl XbfVec {
     /// assert_eq!(vec[1], XbfPrimitive::String("Hello".to_string()).into());
     /// ```
     pub fn new_unchecked(metadata: XbfVecMetadata, elements: Vec<XbfType>) -> Self {
-        let elements = elements.into();
         Self { metadata, elements }
     }
 
@@ -178,113 +176,19 @@ impl XbfVec {
     pub fn get_metadata(&self) -> XbfVecMetadata {
         self.metadata.clone()
     }
+}
 
-    /// Returns a reference to an element or subslice depending on the type of index.
-    ///
-    /// - If given a position, returns a reference to the element at that position or `None` if out
-    /// of bounds.
-    /// - If given a range, returns the subslice corresponding to that range, or `None` if out of
-    /// bounds.
-    ///
-    /// # Examples
-    /// ```rust
-    /// use xbf_rs::XbfVec;
-    /// use xbf_rs::NativeToXbfPrimitive;
-    /// use xbf_rs::XbfTypeUpcast;
-    ///
-    /// let v = XbfVec::from([10u32, 40, 30].as_slice());
-    ///
-    /// let ten = 10u32.into_xbf_primitive().into_base_type();
-    /// let forty = 40u32.into_xbf_primitive().into_base_type();
-    ///
-    /// assert_eq!(Some(&forty), v.get(1));
-    /// assert_eq!(Some(&[ten, forty][..]), v.get(0..2));
-    /// assert_eq!(None, v.get(3));
-    /// assert_eq!(None, v.get(0..4));
-    /// ```
-    pub fn get<I>(&self, index: I) -> Option<&<I as SliceIndex<[XbfType]>>::Output>
-    where
-        I: SliceIndex<[XbfType]>,
-    {
-        self.elements.get(index)
-    }
+impl Deref for XbfVec {
+    type Target = [XbfType];
 
-    /// Returns an iterator over the vector.
-    ///
-    /// The iterator yields all items from start to end.
-    ///
-    /// # Examples
-    /// ```rust
-    /// use xbf_rs::XbfVec;
-    /// use xbf_rs::XbfPrimitive;
-    /// use xbf_rs::XbfType;
-    ///
-    /// let x = XbfVec::from([1i32, 2, 4].as_slice());
-    /// let mut iterator = x.iter();
-    ///
-    /// fn extract_i32<'a>(x: Option<&'a XbfType>) -> Option<&'a i32> {
-    ///     match x {
-    ///         Some(XbfType::Primitive(XbfPrimitive::I32(n))) => Some(n),
-    ///         _ => None
-    ///     }
-    /// }
-    ///
-    /// assert_eq!(extract_i32(iterator.next()), Some(&1));
-    /// assert_eq!(extract_i32(iterator.next()), Some(&2));
-    /// assert_eq!(extract_i32(iterator.next()), Some(&4));
-    /// assert_eq!(extract_i32(iterator.next()), None);
-    /// ```
-    pub fn iter(&self) -> impl Iterator<Item = &XbfType> {
-        self.elements.iter()
-    }
-
-    /// Returns the length of the vector.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use xbf_rs::XbfVec;
-    /// let x = XbfVec::from([1i32, 2, 4].as_slice());
-    /// assert_eq!(x.len(), 3);
-    /// ```
-    pub fn len(&self) -> u16 {
-        self.elements.len() as u16
-    }
-
-    /// Returns whether the vector is empty.
-    ///
-    /// # Examples
-    /// ```rust
-    /// use xbf_rs::XbfVec;
-    /// use xbf_rs::XbfType;
-    ///
-    /// let x = XbfVec::from([1i32, 2, 4].as_slice());
-    ///
-    /// let empty_arr: [i32; 0] = [];
-    /// let y = XbfVec::from(empty_arr.as_slice());
-    ///
-    /// assert_eq!(x.is_empty(), false);
-    /// assert_eq!(y.is_empty(), true);
-    /// ```
-    pub fn is_empty(&self) -> bool {
-        self.elements.is_empty()
+    fn deref(&self) -> &Self::Target {
+        &self.elements
     }
 }
 
-impl AsRef<[XbfType]> for XbfVec {
-    fn as_ref(&self) -> &[XbfType] {
-        self.elements.as_ref()
-    }
-}
-
-impl<I> Index<I> for XbfVec
-where
-    I: SliceIndex<[XbfType]>,
-{
-    type Output = <I as SliceIndex<[XbfType]>>::Output;
-
-    fn index(&self, index: I) -> &Self::Output {
-        &self.elements[index]
+impl DerefMut for XbfVec {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.elements
     }
 }
 
@@ -295,6 +199,42 @@ impl<'a> IntoIterator for &'a XbfVec {
 
     fn into_iter(self) -> Self::IntoIter {
         self.elements.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut XbfVec {
+    type Item = &'a mut XbfType;
+
+    type IntoIter = IterMut<'a, XbfType>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.iter_mut()
+    }
+}
+
+impl IntoIterator for XbfVec {
+    type Item = XbfType;
+
+    type IntoIter = IntoIter<XbfType>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.into_iter()
+    }
+}
+
+impl<T, const N: usize> From<[T; N]> for XbfVec
+where
+    XbfPrimitive: From<T>,
+    T: Default + Clone,
+{
+    fn from(value: [T; N]) -> Self {
+        let primitive_metadata = XbfPrimitive::from(T::default()).get_metadata();
+        let metadata = XbfVecMetadata::new(primitive_metadata.into_base_metadata());
+        let elements = value
+            .into_iter()
+            .map(|x| XbfPrimitive::from(x).into_base_type())
+            .collect();
+        XbfVec::new_unchecked(metadata, elements)
     }
 }
 
@@ -485,7 +425,7 @@ mod tests {
 
     #[test]
     fn get_metdata_works() {
-        let v = XbfVec::from([1i64, 2, 4].as_slice());
+        let v = XbfVec::from([1i64, 2, 4]);
         let metadata = v.get_metadata();
 
         assert_eq!(
@@ -495,52 +435,44 @@ mod tests {
     }
 
     #[test]
-    fn get_works() {
-        let v = XbfVec::from([1i64, 2, 4].as_slice());
-        assert_eq!(v.get(0), Some(&XbfType::Primitive(XbfPrimitive::I64(1))));
-        assert_eq!(v.get(69), None);
-    }
-
-    #[test]
-    fn iter_method_works() {
-        let x = XbfVec::from([1i32, 2, 4].as_slice());
-        let mut iterator = x.iter();
-
-        fn extract_i32<'a>(x: Option<&'a XbfType>) -> Option<&'a i32> {
-            match x {
-                Some(XbfType::Primitive(XbfPrimitive::I32(n))) => Some(n),
-                _ => None,
-            }
-        }
-
-        assert_eq!(extract_i32(iterator.next()), Some(&1));
-        assert_eq!(extract_i32(iterator.next()), Some(&2));
-        assert_eq!(extract_i32(iterator.next()), Some(&4));
-        assert_eq!(extract_i32(iterator.next()), None);
-    }
-
-    #[test]
-    fn index_works() {
-        let x = XbfVec::from([1i32, 2, 4].as_slice());
-        assert_eq!(x[0], XbfType::Primitive(XbfPrimitive::I32(1)));
-    }
-
-    #[test]
-    #[should_panic(expected = "index out of bounds: the len is 3 but the index is 69")]
-    fn index_out_of_bounds_panics() {
-        let x = XbfVec::from([1i32, 2, 4].as_slice());
-        let _ = x[69];
-    }
-
-    #[test]
     fn into_iter_ref_works() {
-        let x = &XbfVec::from([1i32, 2, 4].as_slice());
+        let x = &XbfVec::from([1i32, 2, 4]);
 
         for i in x.into_iter() {
             assert!(matches!(i, XbfType::Primitive(XbfPrimitive::I32(_))));
         }
 
         let _usable_after_loop = x;
+    }
+
+    #[test]
+    fn into_iter_mut_ref_works() {
+        let x = &mut XbfVec::from([1i32, 2, 4]);
+
+        for i in x.into_iter() {
+            assert!(matches!(i, XbfType::Primitive(XbfPrimitive::I32(_))));
+        }
+
+        let _usable_after_loop = x;
+    }
+
+    #[test]
+    fn into_iter_value_works() {
+        let x = XbfVec::from([1i32, 2, 4]);
+
+        for i in x.into_iter() {
+            assert!(matches!(i, XbfType::Primitive(XbfPrimitive::I32(_))));
+        }
+    }
+
+    #[test]
+    fn from_array_works() {
+        let a = [1i32, 2, 4];
+        let x = XbfVec::from(a);
+
+        assert_eq!(x[0], XbfType::Primitive(XbfPrimitive::I32(1)));
+        assert_eq!(x[1], XbfType::Primitive(XbfPrimitive::I32(2)));
+        assert_eq!(x[2], XbfType::Primitive(XbfPrimitive::I32(4)));
     }
 
     #[test]
@@ -567,40 +499,5 @@ mod tests {
         assert_eq!(expected, vec_ref.to_base_type());
         assert_eq!(expected, vec.clone().into());
         assert_eq!(expected, vec.into_base_type());
-    }
-
-    #[test]
-    fn as_ref_works() {
-        fn takes_an_xbftype_slice(x: &[XbfType]) {
-            for i in x {
-                println!("{:?}", i);
-            }
-        }
-
-        let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
-        let vec = XbfVec::new(
-            metadata.clone(),
-            vec![XbfType::Primitive(XbfPrimitive::I32(42))],
-        )
-        .unwrap();
-
-        takes_an_xbftype_slice(vec.as_ref());
-    }
-
-    #[test]
-    fn len_works() {
-        let x = XbfVec::from([1i32, 2, 4].as_slice());
-        assert_eq!(x.len(), 3);
-    }
-
-    #[test]
-    fn is_empty_works() {
-        let x = XbfVec::from([1i32, 2, 4].as_slice());
-
-        let empty_arr: [i32; 0] = [];
-        let y = XbfVec::from(empty_arr.as_slice());
-
-        assert_eq!(x.is_empty(), false);
-        assert_eq!(y.is_empty(), true);
     }
 }
