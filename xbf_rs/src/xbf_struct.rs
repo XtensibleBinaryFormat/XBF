@@ -52,19 +52,25 @@ impl XbfStruct {
     ///     field2_name.to_string() => field2_type.clone(),
     /// });
     ///
-    /// let struct1 = XbfStruct::new(metadata.clone(), vec![
-    ///     i32_field.clone(),
-    ///     u64_field.clone(),
-    /// ]).expect("a valid struct");
+    /// let struct1 = XbfStruct::new(
+    ///     metadata.clone(),
+    ///     [
+    ///         i32_field.clone(),
+    ///         u64_field.clone(),
+    ///     ],
+    /// ).expect("a valid struct");
     ///
     /// assert_eq!(struct1.get_metadata(), metadata);
     /// assert_eq!(struct1.get("a"), Some(&i32_field));
     /// assert_eq!(struct1.get("b"), Some(&u64_field));
     ///
-    /// let struct2 = XbfStruct::new(metadata.clone(), vec![
-    ///     i32_field.clone(),
-    ///     i64_field,
-    /// ]).expect_err("an invalid struct");
+    /// let struct2 = XbfStruct::new(
+    ///     metadata.clone(),
+    ///     [
+    ///         i32_field.clone(),
+    ///         i64_field,
+    ///     ],
+    /// ).expect_err("an invalid struct");
     ///
     /// let expected_err_message = format!("Provided value for field {field2_name} \
     ///     is of type {:?}, expected {field2_type:?}",
@@ -79,9 +85,14 @@ impl XbfStruct {
     ///
     /// assert_eq!(struct3.to_string(), expected_err_message);
     /// ```
-    pub fn new(metadata: XbfStructMetadata, fields: Vec<XbfType>) -> Result<Self, StructError> {
+    pub fn new(
+        metadata: XbfStructMetadata,
+        fields: impl IntoIterator<Item = XbfType>,
+    ) -> Result<Self, StructError> {
+        let given_fields: Rc<[XbfType]> = fields.into_iter().collect();
+
         {
-            let given_fields_len = fields.len();
+            let given_fields_len = given_fields.len();
             let metadata_fields_len = metadata.fields.len();
 
             if given_fields_len != metadata_fields_len {
@@ -92,7 +103,7 @@ impl XbfStruct {
             }
         }
 
-        for ((name, expected_field_type), val) in metadata.fields.iter().zip(fields.iter()) {
+        for ((name, expected_field_type), val) in metadata.fields.iter().zip(given_fields.iter()) {
             let actual_field_type = XbfMetadata::from(val);
             if *expected_field_type != actual_field_type {
                 Err(StructError::FieldMismatch {
@@ -103,8 +114,10 @@ impl XbfStruct {
             }
         }
 
-        let fields = fields.into();
-        Ok(Self { metadata, fields })
+        Ok(Self {
+            metadata,
+            fields: given_fields,
+        })
     }
 
     /// Creates a new [`XbfStruct`] with the supplied metadata and fields without checking if the
@@ -140,16 +153,22 @@ impl XbfStruct {
     ///     }
     /// );
     ///
-    /// let struct1 = XbfStruct::new_unchecked(metadata.clone(), vec![
-    ///     i32_field.clone(),
-    ///     u64_field.clone(),
-    /// ]);
+    /// let struct1 = XbfStruct::new_unchecked(
+    ///     metadata.clone(),
+    ///     [
+    ///         i32_field.clone(),
+    ///         u64_field.clone(),
+    ///     ]
+    /// );
     ///
     /// assert_eq!(struct1.get(&field1_name), Some(&i32_field));
     /// assert_eq!(struct1.get(&field2_name), Some(&u64_field));
     /// ```
-    pub fn new_unchecked(metadata: XbfStructMetadata, fields: Vec<XbfType>) -> Self {
-        let fields = fields.into();
+    pub fn new_unchecked(
+        metadata: XbfStructMetadata,
+        fields: impl IntoIterator<Item = XbfType>,
+    ) -> Self {
+        let fields = fields.into_iter().collect();
         Self { metadata, fields }
     }
 
