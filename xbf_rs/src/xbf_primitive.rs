@@ -170,20 +170,29 @@ impl XbfTypeUpcast for XbfPrimitive {
     }
 }
 
-// TODO: Seal this trait so that nobody can implement it
-// TODO: Are the names of the provided methods correct?
-// TODO: Should both methods be in one trait?
-//
 /// A trait for converting native Rust types to [`XbfPrimitive`] types.
 ///
 /// This trait is implemented for all of the supported types that have an XBF equivalent.
-///
 /// You should not implement this trait yourself.
-pub trait NativeToXbfPrimitive: Into<XbfPrimitive>
-where
-    XbfPrimitive: for<'a> From<&'a Self>,
-{
-    /// Convert a native Rust type to a [`XbfPrimitive`] type.
+pub trait NativeToXbfPrimitive: private::Sealed {
+    /// Convert a native Rust type to an [`XbfPrimitive`], consuming `self`.
+    ///
+    /// Calling this method should not result in a clone.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use xbf_rs::XbfPrimitive;
+    /// use xbf_rs::NativeToXbfPrimitive;
+    ///
+    /// let native = 69i32;
+    /// let primitive = native.into_xbf_primitive();
+    ///
+    /// assert_eq!(primitive, XbfPrimitive::I32(69));
+    /// ```
+    fn into_xbf_primitive(self) -> XbfPrimitive;
+
+    /// Convert a native Rust type to an [`XbfPrimitive`] type.
     ///
     /// Calling this method may result in a clone if the type is [`XbfPrimitive::Bytes`]
     /// or [`XbfPrimitive::String`].
@@ -199,45 +208,34 @@ where
     ///
     /// assert_eq!(primitive, XbfPrimitive::I32(69));
     /// ```
-    fn to_xbf_primitive(&self) -> XbfPrimitive {
-        self.into()
-    }
-
-    /// Convert a native Rust type to a [`XbfPrimitive`] type, consuming `self`.
-    ///
-    /// Calling this method should not result in a clone.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use xbf_rs::XbfPrimitive;
-    /// use xbf_rs::NativeToXbfPrimitive;
-    ///
-    /// let native = 69i32;
-    /// let primitive = native.into_xbf_primitive();
-    ///
-    /// assert_eq!(primitive, XbfPrimitive::I32(69));
-    /// ```
-    fn into_xbf_primitive(self) -> XbfPrimitive {
-        self.into()
-    }
+    fn to_xbf_primitive(&self) -> XbfPrimitive;
 }
 
 macro_rules! impl_NativeToXbfPrimitive {
     ($ty:ty, $xbf_type:tt) => {
         impl From<$ty> for XbfPrimitive {
             fn from(x: $ty) -> Self {
-                XbfPrimitive::$xbf_type(x)
+                x.into_xbf_primitive()
             }
         }
 
         impl From<&$ty> for XbfPrimitive {
             fn from(x: &$ty) -> Self {
-                XbfPrimitive::$xbf_type(x.clone())
+                x.to_xbf_primitive()
             }
         }
 
-        impl NativeToXbfPrimitive for $ty {}
+        impl NativeToXbfPrimitive for $ty {
+            fn into_xbf_primitive(self) -> XbfPrimitive {
+                XbfPrimitive::$xbf_type(self)
+            }
+
+            fn to_xbf_primitive(&self) -> XbfPrimitive {
+                XbfPrimitive::$xbf_type(self.clone())
+            }
+        }
+
+        impl private::Sealed for $ty {}
     };
 }
 
@@ -256,6 +254,10 @@ impl_NativeToXbfPrimitive!(f32, F32);
 impl_NativeToXbfPrimitive!(f64, F64);
 impl_NativeToXbfPrimitive!(Vec<u8>, Bytes);
 impl_NativeToXbfPrimitive!(String, String);
+
+mod private {
+    pub trait Sealed {}
+}
 
 #[cfg(test)]
 mod tests {
