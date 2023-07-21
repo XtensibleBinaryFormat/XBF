@@ -79,9 +79,9 @@ impl From<&XbfStructMetadata> for XbfMetadata {
 impl From<&XbfType> for XbfMetadata {
     fn from(value: &XbfType) -> Self {
         match value {
-            XbfType::Primitive(v) => XbfPrimitiveMetadata::from(v).to_base_metadata(),
-            XbfType::Vec(v) => XbfVecMetadata::from(v).to_base_metadata(),
-            XbfType::Struct(v) => XbfStructMetadata::from(v).to_base_metadata(),
+            XbfType::Primitive(v) => XbfPrimitiveMetadata::from(v).into(),
+            XbfType::Vec(v) => XbfVecMetadata::from(v).into(),
+            XbfType::Struct(v) => XbfStructMetadata::from(v).into(),
         }
     }
 }

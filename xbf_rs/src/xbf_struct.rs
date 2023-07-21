@@ -8,14 +8,16 @@ use std::{
     error::Error,
     fmt::Display,
     io::{self, Read, Write},
-    rc::Rc,
 };
 
 /// A struct as defined by the XBF specification.
+///
+/// The metadata of a struct cannot be changed, however its fields can be mutated. Cloning a struct
+/// is relatively expensive, as the underlying fields will also need to be cloned.
 #[derive(Debug, Clone, PartialEq)]
 pub struct XbfStruct {
     pub(crate) metadata: XbfStructMetadata,
-    fields: Rc<[XbfType]>,
+    fields: Box<[XbfType]>,
 }
 
 impl XbfStruct {
@@ -89,10 +91,10 @@ impl XbfStruct {
         metadata: XbfStructMetadata,
         fields: impl IntoIterator<Item = XbfType>,
     ) -> Result<Self, StructError> {
-        let given_fields: Rc<[XbfType]> = fields.into_iter().collect();
+        let fields: Box<[XbfType]> = fields.into_iter().collect();
 
         {
-            let given_fields_len = given_fields.len();
+            let given_fields_len = fields.len();
             let metadata_fields_len = metadata.fields.len();
 
             if given_fields_len != metadata_fields_len {
@@ -103,7 +105,7 @@ impl XbfStruct {
             }
         }
 
-        for ((name, expected_field_type), val) in metadata.fields.iter().zip(given_fields.iter()) {
+        for ((name, expected_field_type), val) in metadata.fields.iter().zip(fields.iter()) {
             let actual_field_type = XbfMetadata::from(val);
             if *expected_field_type != actual_field_type {
                 Err(StructError::FieldMismatch {
@@ -114,10 +116,7 @@ impl XbfStruct {
             }
         }
 
-        Ok(Self {
-            metadata,
-            fields: given_fields,
-        })
+        Ok(Self { metadata, fields })
     }
 
     /// Creates a new [`XbfStruct`] with the supplied metadata and fields without checking if the
@@ -324,6 +323,42 @@ impl XbfStruct {
             .fields
             .get_index_of(field_name)
             .map(|i| &self.fields[i])
+    }
+
+    /// Sets the value of a field if it exists, returning the previous value, otherwise returns
+    /// `None`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use xbf_rs::prelude::*;
+    /// use xbf_rs::XbfStruct;
+    /// use xbf_rs::XbfStructMetadata;
+    /// use xbf_rs::XbfPrimitiveMetadata;
+    /// use indexmap::indexmap;
+    ///
+    /// let metadata = XbfStructMetadata::new(
+    ///     "test_struct".to_string(),
+    ///     indexmap!{
+    ///         "a".to_string() => XbfPrimitiveMetadata::I32.into(),
+    ///     }
+    /// );
+    ///
+    /// let expected_old_value = 42i32.to_xbf_primitive().into_base_type();
+    /// let mut s = XbfStruct::new(metadata, [expected_old_value.clone()]).expect("a valid struct");
+    /// let new_value = 100i32.to_xbf_primitive().into_base_type();
+    ///
+    /// assert_eq!(s.set("a", new_value.clone()), Some(expected_old_value));
+    /// assert_eq!(s.get("a"), Some(&new_value));
+    /// ```
+    pub fn set(&mut self, field_name: &str, field_data: XbfType) -> Option<XbfType> {
+        self.metadata.fields.get_index_of(field_name).and_then(|i| {
+            let current = &mut self.fields[i];
+            if XbfMetadata::from(&*current) != XbfMetadata::from(&field_data) {
+                None
+            } else {
+                Some(std::mem::replace(current, field_data))
+            }
+        })
     }
 }
 

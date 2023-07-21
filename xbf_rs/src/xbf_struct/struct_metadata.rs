@@ -17,6 +17,10 @@ use std::{
 pub const STRUCT_METADATA_DISCRIMINANT: u8 = VEC_METADATA_DISCRIMINANT + 1;
 
 /// Metadata for a Struct type.
+///
+/// Struct metadata is immutable, and cannot be changed once created. Cloning this metadata is
+/// relatively inexpensive, as the current implementation is using reference-counted shared
+/// memory internally.
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct XbfStructMetadata {
     name: Rc<str>,
