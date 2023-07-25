@@ -218,4 +218,19 @@ mod tests {
         primitive_metadata_from_primitive_test!(Bytes, vec![1, 2, 3, 4]);
         primitive_metadata_from_primitive_test!(String, "Hello World".to_string());
     }
+
+    #[test]
+    fn upcast_works() {
+        let primitive_metadata = XbfPrimitiveMetadata::I32;
+        let primitive_metadata_ref = &primitive_metadata;
+
+        assert_eq!(
+            XbfMetadata::Primitive(primitive_metadata.clone()),
+            primitive_metadata_ref.to_base_metadata()
+        );
+        assert_eq!(
+            XbfMetadata::Primitive(primitive_metadata.clone()),
+            primitive_metadata.into_base_metadata()
+        );
+    }
 }
