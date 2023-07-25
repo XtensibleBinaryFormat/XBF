@@ -12,3 +12,12 @@ indexmap = "2.0.0"
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+[features]
+default = ["xbf_threadsafe"]
+xbf_threadsafe = []
+
+[[example]]
+name = "server"
+path = "examples/server.rs"
+required-features = ["xbf_threadsafe"]

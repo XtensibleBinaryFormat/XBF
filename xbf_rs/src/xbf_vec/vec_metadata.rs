@@ -1,9 +1,6 @@
-use crate::{xbf_primitive::XbfPrimitiveMetadata, XbfMetadata, XbfMetadataUpcast, XbfVec};
+use crate::{xbf_primitive::XbfPrimitiveMetadata, RcType, XbfMetadata, XbfMetadataUpcast, XbfVec};
 use byteorder::WriteBytesExt;
-use std::{
-    io::{self, Read, Write},
-    rc::Rc,
-};
+use std::io::{self, Read, Write};
 
 /// The metadata discriminant for a Vec type.
 ///
@@ -17,7 +14,7 @@ pub const VEC_METADATA_DISCRIMINANT: u8 = XbfPrimitiveMetadata::String as u8 + 1
 /// type on the stack.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct XbfVecMetadata {
-    pub(crate) inner_type: Rc<XbfMetadata>,
+    pub(crate) inner_type: RcType<XbfMetadata>,
 }
 
 impl XbfVecMetadata {
@@ -37,7 +34,7 @@ impl XbfVecMetadata {
     /// ```
     pub fn new(inner_type: impl Into<XbfMetadata>) -> Self {
         Self {
-            inner_type: Rc::new(inner_type.into()),
+            inner_type: RcType::new(inner_type.into()),
         }
     }
 

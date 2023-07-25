@@ -1,14 +1,11 @@
 use crate::{
     base_metadata::XbfMetadataUpcast,
     util::{read_string, write_string},
-    XbfMetadata, XbfStruct, VEC_METADATA_DISCRIMINANT,
+    RcType, XbfMetadata, XbfStruct, VEC_METADATA_DISCRIMINANT,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use indexmap::IndexMap;
-use std::{
-    io::{self, Read, Write},
-    rc::Rc,
-};
+use std::io::{self, Read, Write};
 
 /// The metadata discriminant for a Struct type.
 ///
@@ -29,7 +26,7 @@ pub(in crate::xbf_struct) struct XbfStructMetadataInner {
 /// memory internally.
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct XbfStructMetadata {
-    pub(in crate::xbf_struct) inner: Rc<XbfStructMetadataInner>,
+    pub(in crate::xbf_struct) inner: RcType<XbfStructMetadataInner>,
 }
 
 impl XbfStructMetadata {
@@ -62,7 +59,7 @@ impl XbfStructMetadata {
         fields: IndexMap<impl Into<Box<str>>, XbfMetadata>,
     ) -> Self {
         Self {
-            inner: Rc::new(XbfStructMetadataInner {
+            inner: RcType::new(XbfStructMetadataInner {
                 name: name.into(),
                 fields: fields.into_iter().map(|(k, v)| (k.into(), v)).collect(),
             }),
