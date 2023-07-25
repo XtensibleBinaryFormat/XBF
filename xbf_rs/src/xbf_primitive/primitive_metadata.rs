@@ -225,11 +225,11 @@ mod tests {
         let primitive_metadata_ref = &primitive_metadata;
 
         assert_eq!(
-            XbfMetadata::Primitive(primitive_metadata.clone()),
+            XbfMetadata::Primitive(primitive_metadata),
             primitive_metadata_ref.to_base_metadata()
         );
         assert_eq!(
-            XbfMetadata::Primitive(primitive_metadata.clone()),
+            XbfMetadata::Primitive(primitive_metadata),
             primitive_metadata.into_base_metadata()
         );
     }
