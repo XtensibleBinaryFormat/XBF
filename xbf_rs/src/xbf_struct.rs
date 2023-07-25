@@ -351,13 +351,14 @@ impl XbfStruct {
     /// assert_eq!(s.set("a", new_value.clone()), Some(expected_old_value));
     /// assert_eq!(s.get("a"), Some(&new_value));
     /// ```
-    pub fn set(&mut self, field_name: &str, field_data: XbfType) -> Option<XbfType> {
+    pub fn set(&mut self, field_name: &str, field_data: impl Into<XbfType>) -> Option<XbfType> {
         self.metadata
             .inner
             .fields
             .get_index_of(field_name)
             .and_then(|i| {
                 let current = &mut self.fields[i];
+                let field_data = field_data.into();
                 if XbfMetadata::from(&*current) != XbfMetadata::from(&field_data) {
                     None
                 } else {
@@ -589,6 +590,28 @@ mod tests {
             XbfStruct::deserialize_struct_type(&outer_metadata, &mut reader).unwrap();
 
         assert_eq!(my_struct, deserialized);
+    }
+
+    #[test]
+    fn set_works() {
+        let mut s = XbfStruct::new(
+            XbfStructMetadata::new(
+                "test",
+                indexmap! {
+                    "a" => XbfPrimitiveMetadata::I32.into(),
+                },
+            ),
+            [XbfPrimitive::I32(42).into()],
+        )
+        .expect("a valid struct");
+
+        assert_eq!(s.get("a"), Some(&XbfPrimitive::I32(42).into()));
+
+        assert_eq!(s.set("a", XbfPrimitive::U64(69)), None);
+        assert_eq!(
+            s.set("a", XbfPrimitive::I32(42)),
+            Some(XbfPrimitive::I32(42).into())
+        );
     }
 
     #[test]
