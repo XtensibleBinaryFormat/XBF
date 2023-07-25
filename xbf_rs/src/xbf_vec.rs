@@ -8,7 +8,7 @@ use crate::{XbfMetadata, XbfType, XbfTypeUpcast};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::{
     io::{self, Read, Write},
-    ops::{Deref, DerefMut},
+    ops::Deref,
     slice::{Iter, IterMut},
     vec::IntoIter,
 };
@@ -200,12 +200,6 @@ impl Deref for XbfVec {
 
     fn deref(&self) -> &Self::Target {
         &self.elements
-    }
-}
-
-impl DerefMut for XbfVec {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.elements
     }
 }
 
@@ -439,6 +433,19 @@ mod tests {
         for i in x.into_iter() {
             assert!(matches!(i, XbfType::Primitive(XbfPrimitive::I32(_))));
         }
+    }
+
+    #[test]
+    fn deref_works() {
+        let x = XbfVec::new(
+            XbfVecMetadata::new(XbfPrimitiveMetadata::I32),
+            [1i32, 2, 4].map(XbfPrimitive::from),
+        )
+        .unwrap();
+
+        assert_eq!(x[0], XbfPrimitive::I32(1).into());
+        assert_eq!(x[1], XbfPrimitive::I32(2).into());
+        assert_eq!(x[2], XbfPrimitive::I32(4).into());
     }
 
     #[test]
