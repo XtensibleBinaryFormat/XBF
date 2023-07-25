@@ -32,12 +32,12 @@ impl XbfVecMetadata {
     /// use xbf_rs::XbfMetadata;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
-    /// let inner_type = XbfPrimitiveMetadata::I32.into();
+    /// let inner_type = XbfPrimitiveMetadata::I32;
     /// let metadata = XbfVecMetadata::new(inner_type);
     /// ```
-    pub fn new(inner_type: XbfMetadata) -> Self {
+    pub fn new(inner_type: impl Into<XbfMetadata>) -> Self {
         Self {
-            inner_type: Rc::new(inner_type),
+            inner_type: Rc::new(inner_type.into()),
         }
     }
 
@@ -50,7 +50,7 @@ impl XbfVecMetadata {
     /// use xbf_rs::XbfVecMetadata;
     /// use xbf_rs::VEC_METADATA_DISCRIMINANT;
     ///
-    /// let inner_type = XbfPrimitiveMetadata::I32.into();
+    /// let inner_type = XbfPrimitiveMetadata::I32;
     /// let metadata = XbfVecMetadata::new(inner_type);
     /// let mut writer = Vec::new();
     /// metadata.serialize_vec_metadata(&mut writer).unwrap();
@@ -80,7 +80,7 @@ impl XbfVecMetadata {
     ///
     /// let metadata = XbfVecMetadata::deserialize_vec_metadata(&mut reader).unwrap();
     ///
-    /// assert_eq!(metadata, XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into()));
+    /// assert_eq!(metadata, XbfVecMetadata::new(XbfPrimitiveMetadata::I32));
     /// ```
     pub fn deserialize_vec_metadata(reader: &mut impl Read) -> io::Result<XbfVecMetadata> {
         let inner_type = XbfMetadata::deserialize_base_metadata(reader)?;
@@ -155,8 +155,8 @@ mod tests {
 
     #[test]
     fn nested_vec_metadata_serialize_works() {
-        let vec_i32_metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
-        let vec_vec_i32_metadata = XbfVecMetadata::new(vec_i32_metadata.into());
+        let vec_i32_metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32);
+        let vec_vec_i32_metadata = XbfVecMetadata::new(vec_i32_metadata);
         let mut writer = vec![];
 
         vec_vec_i32_metadata
@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn upcast_works() {
         let primitive_metadata = XbfPrimitiveMetadata::I32;
-        let vec_metadata = XbfVecMetadata::new(primitive_metadata.into());
+        let vec_metadata = XbfVecMetadata::new(primitive_metadata);
         let vec_metadata_ref = &vec_metadata;
 
         assert_eq!(

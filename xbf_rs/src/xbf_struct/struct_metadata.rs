@@ -16,6 +16,12 @@ use std::{
 /// equal to the discriminant value of the vector type plus one.
 pub const STRUCT_METADATA_DISCRIMINANT: u8 = VEC_METADATA_DISCRIMINANT + 1;
 
+#[derive(Debug, PartialEq, Eq)]
+pub(in crate::xbf_struct) struct XbfStructMetadataInner {
+    pub(in crate::xbf_struct) name: Box<str>,
+    pub(in crate::xbf_struct) fields: IndexMap<Box<str>, XbfMetadata>,
+}
+
 /// Metadata for a Struct type.
 ///
 /// Struct metadata is immutable, and cannot be changed once created. Cloning this metadata is
@@ -23,8 +29,7 @@ pub const STRUCT_METADATA_DISCRIMINANT: u8 = VEC_METADATA_DISCRIMINANT + 1;
 /// memory internally.
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct XbfStructMetadata {
-    name: Rc<str>,
-    pub(super) fields: Rc<IndexMap<String, XbfMetadata>>,
+    pub(in crate::xbf_struct) inner: Rc<XbfStructMetadataInner>,
 }
 
 impl XbfStructMetadata {
@@ -52,11 +57,16 @@ impl XbfStructMetadata {
     /// assert_eq!(metadata.get_field_type("b"), Some(&XbfPrimitiveMetadata::U64.into()));
     /// assert_eq!(metadata.get_field_type("c"), None);
     /// ```
-    pub fn new(name: String, fields: IndexMap<String, XbfMetadata>) -> Self {
-        let name = name.into();
-        let fields = fields.into();
-
-        Self { name, fields }
+    pub fn new(
+        name: impl Into<Box<str>>,
+        fields: IndexMap<impl Into<Box<str>>, XbfMetadata>,
+    ) -> Self {
+        Self {
+            inner: Rc::new(XbfStructMetadataInner {
+                name: name.into(),
+                fields: fields.into_iter().map(|(k, v)| (k.into(), v)).collect(),
+            }),
+        }
     }
 
     /// Returns the name of the struct.
@@ -70,17 +80,15 @@ impl XbfStructMetadata {
     ///
     /// use indexmap::indexmap;
     ///
-    /// let name = "test_struct";
-    ///
     /// let metadata = XbfStructMetadata::new(
-    ///   name.to_string(),
-    ///   indexmap![],
+    ///   "test_struct",
+    ///   indexmap! { "a" => XbfPrimitiveMetadata::I32.into() },
     /// );
     ///
-    /// assert_eq!(metadata.name(), name);
+    /// assert_eq!(metadata.name(), "test_struct");
     /// ```
     pub fn name(&self) -> &str {
-        &self.name
+        &self.inner.name
     }
 
     /// Returns the metadata of a field if it exists, otherwise returns `None`.
@@ -110,15 +118,10 @@ impl XbfStructMetadata {
     /// assert_eq!(metadata.get_field_type("b"), None);
     /// ```
     pub fn get_field_type(&self, field: &str) -> Option<&XbfMetadata> {
-        self.fields.get(field)
-        // self.get_field_index(field).map(|i| &self.fields[*i].1)
+        self.inner.fields.get(field)
     }
 
-    // pub(crate) fn get_field_index(&self, field: &str) -> Option<&usize> {
-    //     self.fields_lookup.get(field)
-    // }
-
-    /// Serialize a struct as defined by the XBF specification.
+    /// Serialize struct metadata as defined by the XBF specification.
     ///
     /// # Example
     ///
@@ -145,7 +148,7 @@ impl XbfStructMetadata {
     ///
     /// metadata.serialize_struct_metadata(&mut writer).unwrap();
     ///
-    /// let expected = (|| {
+    /// let expected = {
     ///     let mut v = vec![STRUCT_METADATA_DISCRIMINANT];
     ///     v.extend_from_slice((struct_name.len() as u16).to_le_bytes().as_slice());
     ///     v.extend_from_slice(struct_name.as_bytes());
@@ -157,23 +160,29 @@ impl XbfStructMetadata {
     ///     v.extend_from_slice(field2_name.as_bytes());
     ///     v.extend_from_slice((XbfPrimitiveMetadata::U64 as u8).to_le_bytes().as_slice());
     ///     v
-    /// })();
+    /// };
     ///
     ///
     /// assert_eq!(writer, expected);
     /// ```
     pub fn serialize_struct_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_u8(STRUCT_METADATA_DISCRIMINANT)?;
-        write_string(&self.name, writer)?;
-        writer.write_u16::<LittleEndian>(self.fields.len() as u16)?;
-        self.fields.iter().try_for_each(|(name, type_)| {
+
+        let name = &self.inner.name;
+        write_string(name, writer)?;
+
+        let fields = &self.inner.fields;
+        let len = fields.len() as u16;
+        writer.write_u16::<LittleEndian>(len)?;
+
+        fields.iter().try_for_each(|(name, type_)| {
             write_string(name, writer).and_then(|_| type_.serialize_base_metadata(writer))
         })
     }
 
     /// Deserialize struct metadata as defined by the XBF specification.
     ///
-    ///This method assumes that you know for a fact you are about to receive Struct metadata. If you
+    /// This method assumes that you know for a fact you are about to receive Struct metadata. If you
     /// do not know what sort of metadata you are receiving, use
     /// [`deserialize_base_metadata`](crate::XbfMetadata::deserialize_base_metadata).
     ///
@@ -252,9 +261,9 @@ mod tests {
     #[test]
     fn metadata_new_works() {
         let metadata = XbfStructMetadata::new(
-            "test".to_string(),
+            "test",
             indexmap! {
-                "a".to_string() => XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
+                "a" => XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
             },
         );
 
@@ -270,9 +279,9 @@ mod tests {
         let metadata = XbfStructMetadata::new(
             "test".to_string(),
             indexmap! {
-                    "a".to_string() => XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
-                    "b".to_string() => XbfMetadata::Vec(XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into())),
-                    "c".to_string() => XbfMetadata::Struct(XbfStructMetadata::new(
+                    "a" => XbfMetadata::Primitive(XbfPrimitiveMetadata::I32),
+                    "b" => XbfMetadata::Vec(XbfVecMetadata::new(XbfPrimitiveMetadata::I32)),
+                    "c" => XbfMetadata::Struct(XbfStructMetadata::new(
                         "inner".to_string(),
                         indexmap! {
                             "d".to_string( ) =>
@@ -289,7 +298,7 @@ mod tests {
         // disciminant
         expected.write_u8(STRUCT_METADATA_DISCRIMINANT).unwrap();
         // name
-        write_string(&metadata.name, &mut expected).unwrap();
+        write_string(&metadata.inner.name, &mut expected).unwrap();
         // num of fields
         expected.write_u16::<LittleEndian>(3).unwrap();
         // field a

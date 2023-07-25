@@ -4,10 +4,9 @@ mod vec_metadata;
 
 pub use vec_metadata::*;
 
-use crate::{XbfMetadataUpcast, XbfPrimitive, XbfType, XbfTypeUpcast};
+use crate::{XbfMetadata, XbfType, XbfTypeUpcast};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::{
-    default::Default,
     io::{self, Read, Write},
     ops::{Deref, DerefMut},
     slice::{Iter, IterMut},
@@ -37,17 +36,17 @@ impl XbfVec {
     /// use xbf_rs::XbfPrimitive;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
-    /// let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
-    /// let data = vec![XbfPrimitive::I32(42).into(), XbfPrimitive::I32(69).into()];
+    /// let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32);
+    /// let data = [XbfPrimitive::I32(42), XbfPrimitive::I32(69)];
     /// let vec = XbfVec::new(metadata, data);
     ///
     /// // Data contains alements which are all the same type as the metdata.
     /// assert!(vec.is_ok());
     ///
-    /// let metadata2 = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
+    /// let metadata2 = XbfVecMetadata::new(XbfPrimitiveMetadata::I32);
     /// let data2 = vec![
-    ///     XbfPrimitive::I32(42).into(),
-    ///     XbfPrimitive::String("Hello".to_string()).into(),
+    ///     XbfPrimitive::I32(42),
+    ///     XbfPrimitive::String("Hello".to_string()),
     /// ];
     /// let vec2 = XbfVec::new(metadata2, data2);
     ///
@@ -56,9 +55,14 @@ impl XbfVec {
     /// ```
     pub fn new(
         metadata: XbfVecMetadata,
-        elements: Vec<XbfType>,
+        elements: impl IntoIterator<Item = impl Into<XbfType>>,
     ) -> Result<Self, ElementsNotHomogenousError> {
-        let all_same_type = elements.iter().all(|x| *metadata.inner_type == x.into());
+        let elements = elements.into_iter().map(Into::into).collect::<Vec<_>>();
+
+        let all_same_type = elements
+            .iter()
+            .all(|x| *metadata.inner_type == XbfMetadata::from(x));
+
         if all_same_type {
             Ok(Self { metadata, elements })
         } else {
@@ -75,10 +79,10 @@ impl XbfVec {
     /// use xbf_rs::XbfPrimitive;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
-    /// let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
+    /// let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32);
     /// let data = vec![
-    ///     XbfPrimitive::I32(42).into(),
-    ///     XbfPrimitive::String("Hello".to_string()).into(),
+    ///     XbfPrimitive::I32(42),
+    ///     XbfPrimitive::String("Hello".to_string()),
     /// ];
     /// let vec = XbfVec::new_unchecked(metadata, data);
     ///
@@ -86,7 +90,11 @@ impl XbfVec {
     /// assert_eq!(vec[0], XbfPrimitive::I32(42).into());
     /// assert_eq!(vec[1], XbfPrimitive::String("Hello".to_string()).into());
     /// ```
-    pub fn new_unchecked(metadata: XbfVecMetadata, elements: Vec<XbfType>) -> Self {
+    pub fn new_unchecked(
+        metadata: XbfVecMetadata,
+        elements: impl IntoIterator<Item = impl Into<XbfType>>,
+    ) -> Self {
+        let elements = elements.into_iter().map(Into::into).collect::<Vec<_>>();
         Self { metadata, elements }
     }
 
@@ -105,8 +113,8 @@ impl XbfVec {
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
     /// let vec = XbfVec::new(
-    ///     XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into()),
-    ///     vec![XbfPrimitive::I32(42).into()]
+    ///     XbfVecMetadata::new(XbfPrimitiveMetadata::I32),
+    ///     vec![XbfPrimitive::I32(42)]
     /// ).unwrap();
     /// let mut writer = vec![];
     /// vec.serialize_vec_type(&mut writer).unwrap();
@@ -139,13 +147,16 @@ impl XbfVec {
     /// use xbf_rs::XbfPrimitive;
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
-    /// let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
+    /// let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32);
     /// let mut reader = vec![];
     /// reader.extend_from_slice(&1u16.to_le_bytes());
     /// reader.extend_from_slice(&42u32.to_le_bytes());
     /// let mut reader = std::io::Cursor::new(reader);
     ///
     /// let vec = XbfVec::deserialize_vec_type(&metadata, &mut reader).unwrap();
+    ///
+    /// assert_eq!(vec.len(), 1);
+    /// assert_eq!(vec[0], XbfPrimitive::I32(42).into());
     /// ```
     pub fn deserialize_vec_type(
         metadata: &XbfVecMetadata,
@@ -171,13 +182,13 @@ impl XbfVec {
     /// use xbf_rs::XbfPrimitiveMetadata;
     ///
     /// let vec = XbfVec::new(
-    ///     XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into()),
-    ///     vec![XbfPrimitive::I32(42).into()]
+    ///     XbfVecMetadata::new(XbfPrimitiveMetadata::I32),
+    ///     [XbfPrimitive::I32(42)]
     /// ).unwrap();
     ///
     /// let metadata = vec.get_metadata();
     ///
-    /// assert_eq!(metadata, XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into()));
+    /// assert_eq!(metadata, XbfVecMetadata::new(XbfPrimitiveMetadata::I32));
     /// ```
     pub fn get_metadata(&self) -> XbfVecMetadata {
         self.metadata.clone()
@@ -228,55 +239,6 @@ impl IntoIterator for XbfVec {
     }
 }
 
-impl<T, const N: usize> From<[T; N]> for XbfVec
-where
-    XbfPrimitive: From<T>,
-    T: Default + Clone,
-{
-    fn from(value: [T; N]) -> Self {
-        let primitive_metadata = XbfPrimitive::from(T::default()).get_metadata();
-        let metadata = XbfVecMetadata::new(primitive_metadata.into_base_metadata());
-        let elements = value
-            .into_iter()
-            .map(|x| XbfPrimitive::from(x).into_base_type())
-            .collect();
-        XbfVec::new_unchecked(metadata, elements)
-    }
-}
-
-impl<T> From<&[T]> for XbfVec
-where
-    XbfPrimitive: From<T>,
-    T: Default + Clone,
-{
-    fn from(value: &[T]) -> Self {
-        let primitive_metadata = XbfPrimitive::from(T::default()).get_metadata();
-        let metadata = XbfVecMetadata::new(primitive_metadata.into_base_metadata());
-        let elements = value
-            .iter()
-            .cloned()
-            .map(|x| XbfPrimitive::from(x).into_base_type())
-            .collect();
-        XbfVec::new_unchecked(metadata, elements)
-    }
-}
-
-impl<T> FromIterator<T> for XbfVec
-where
-    XbfPrimitive: From<T>,
-    T: Default,
-{
-    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let primitive_metadata = XbfPrimitive::from(T::default()).get_metadata();
-        let metadata = XbfVecMetadata::new(primitive_metadata.into_base_metadata());
-        let elements = iter
-            .into_iter()
-            .map(|x| XbfPrimitive::from(x).into_base_type())
-            .collect();
-        XbfVec::new_unchecked(metadata, elements)
-    }
-}
-
 impl XbfTypeUpcast for XbfVec {
     fn into_base_type(self) -> XbfType {
         XbfType::Vec(self)
@@ -297,12 +259,12 @@ pub struct ElementsNotHomogenousError;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::XbfPrimitiveMetadata;
+    use crate::{XbfMetadataUpcast, XbfPrimitive, XbfPrimitiveMetadata};
     use std::io::Cursor;
 
     #[test]
     fn vec_new_fails_with_not_homogenous_data() {
-        let data = vec![XbfPrimitive::I32(42).into(), XbfPrimitive::U32(69).into()];
+        let data = [XbfPrimitive::I32(42), XbfPrimitive::U32(69)].map(XbfType::from);
         let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into_base_metadata());
         let err = XbfVec::new(metadata, data).unwrap_err();
         assert_eq!(err, ElementsNotHomogenousError);
@@ -337,19 +299,19 @@ mod tests {
     #[test]
     fn serialize_vec_of_vec_works() {
         const TEST_NUM: i32 = 42;
-        let vec_of_i32_metadata =
-            XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into_base_metadata());
+
         let vec_of_two_i32 = XbfVec::new(
-            vec_of_i32_metadata.clone(),
+            XbfVecMetadata::new(XbfPrimitiveMetadata::I32),
             vec![
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
             ],
         )
         .unwrap();
+
         let vec_of_vec_of_i32 = XbfVec::new_unchecked(
-            vec_of_i32_metadata.into(),
-            vec![vec_of_two_i32.clone().into(), vec_of_two_i32.into()],
+            XbfVecMetadata::new(vec_of_two_i32.get_metadata()),
+            [vec_of_two_i32.clone(), vec_of_two_i32].map(XbfType::from),
         );
 
         let mut writer = vec![];
@@ -376,7 +338,7 @@ mod tests {
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
         let mut reader = Cursor::new(data);
 
-        let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
+        let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32);
         let expected = XbfVec::new(
             metadata.clone(),
             vec![XbfType::Primitive(XbfPrimitive::I32(TEST_NUM))],
@@ -401,13 +363,11 @@ mod tests {
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
         let mut reader = Cursor::new(data);
 
-        let int_meta = XbfPrimitiveMetadata::I32;
-        let inner_vec_metadata = XbfVecMetadata::new(int_meta.to_base_metadata());
-        let outer_vec_metadata = XbfVecMetadata::new(inner_vec_metadata.to_base_metadata());
+        // let outer_vec_metadata = XbfVecMetadata::new(inner_vec_metadata.to_base_metadata());
 
         let expected_inner_vec = XbfVec::new(
-            inner_vec_metadata.clone(),
-            vec![
+            XbfVecMetadata::new(XbfPrimitiveMetadata::I32),
+            [
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
                 XbfType::Primitive(XbfPrimitive::I32(TEST_NUM)),
             ],
@@ -415,31 +375,36 @@ mod tests {
         .unwrap();
 
         let expected = XbfVec::new(
-            outer_vec_metadata.clone(),
-            vec![expected_inner_vec.clone().into(), expected_inner_vec.into()],
+            XbfVecMetadata::new(expected_inner_vec.get_metadata()),
+            [expected_inner_vec.clone(), expected_inner_vec].map(XbfType::from),
         )
         .unwrap();
 
         let vec =
-            XbfType::deserialize_base_type(&(outer_vec_metadata.into()), &mut reader).unwrap();
+            XbfType::deserialize_base_type(&expected.get_metadata().into(), &mut reader).unwrap();
 
         assert_eq!(vec, expected.into());
     }
 
     #[test]
     fn get_metdata_works() {
-        let v = XbfVec::from([1i64, 2, 4]);
+        let v = XbfVec::new(
+            XbfVecMetadata::new(XbfPrimitiveMetadata::I64),
+            [1i64, 2, 4].map(XbfPrimitive::from),
+        )
+        .unwrap();
         let metadata = v.get_metadata();
 
-        assert_eq!(
-            metadata,
-            XbfVecMetadata::new(XbfPrimitiveMetadata::I64.into())
-        );
+        assert_eq!(metadata, XbfVecMetadata::new(XbfPrimitiveMetadata::I64));
     }
 
     #[test]
     fn into_iter_ref_works() {
-        let x = &XbfVec::from([1i32, 2, 4]);
+        let x = &XbfVec::new(
+            XbfVecMetadata::new(XbfPrimitiveMetadata::I32),
+            [1i32, 2, 4].map(XbfPrimitive::from),
+        )
+        .unwrap();
 
         for i in x.into_iter() {
             assert!(matches!(i, XbfType::Primitive(XbfPrimitive::I32(_))));
@@ -450,7 +415,11 @@ mod tests {
 
     #[test]
     fn into_iter_mut_ref_works() {
-        let x = &mut XbfVec::from([1i32, 2, 4]);
+        let x = &mut XbfVec::new(
+            XbfVecMetadata::new(XbfPrimitiveMetadata::I32),
+            [1i32, 2, 4].map(XbfPrimitive::from),
+        )
+        .unwrap();
 
         for i in x.into_iter() {
             assert!(matches!(i, XbfType::Primitive(XbfPrimitive::I32(_))));
@@ -461,7 +430,11 @@ mod tests {
 
     #[test]
     fn into_iter_value_works() {
-        let x = XbfVec::from([1i32, 2, 4]);
+        let x = XbfVec::new(
+            XbfVecMetadata::new(XbfPrimitiveMetadata::I32),
+            [1i32, 2, 4].map(XbfPrimitive::from),
+        )
+        .unwrap();
 
         for i in x.into_iter() {
             assert!(matches!(i, XbfType::Primitive(XbfPrimitive::I32(_))));
@@ -469,32 +442,9 @@ mod tests {
     }
 
     #[test]
-    fn from_array_works() {
-        let a = [1i32, 2, 4];
-        let x = XbfVec::from(a);
-
-        assert_eq!(x[0], XbfType::Primitive(XbfPrimitive::I32(1)));
-        assert_eq!(x[1], XbfType::Primitive(XbfPrimitive::I32(2)));
-        assert_eq!(x[2], XbfType::Primitive(XbfPrimitive::I32(4)));
-    }
-
-    #[test]
-    fn from_iterator_and_slice_works() {
-        let a = vec![1i32, 2, 4];
-        let x = XbfVec::from(a.as_slice());
-
-        let a_iter = a.into_iter();
-        let x1 = XbfVec::from_iter(a_iter.clone());
-        let x2 = a_iter.collect::<XbfVec>();
-
-        assert_eq!(x, x1);
-        assert_eq!(x, x2);
-    }
-
-    #[test]
     fn upcast_works() {
-        let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into());
-        let vec = XbfVec::new(metadata, vec![XbfType::Primitive(XbfPrimitive::I32(42))]).unwrap();
+        let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32);
+        let vec = XbfVec::new(metadata, [XbfType::Primitive(XbfPrimitive::I32(42))]).unwrap();
         let vec_ref = &vec;
         let expected = XbfType::Vec(vec.clone());
 

@@ -95,7 +95,7 @@ impl XbfStruct {
 
         {
             let given_fields_len = fields.len();
-            let metadata_fields_len = metadata.fields.len();
+            let metadata_fields_len = metadata.inner.fields.len();
 
             if given_fields_len != metadata_fields_len {
                 Err(StructError::DifferentLengths {
@@ -105,7 +105,7 @@ impl XbfStruct {
             }
         }
 
-        for ((name, expected_field_type), val) in metadata.fields.iter().zip(fields.iter()) {
+        for ((name, expected_field_type), val) in metadata.inner.fields.iter().zip(fields.iter()) {
             let actual_field_type = XbfMetadata::from(val);
             if *expected_field_type != actual_field_type {
                 Err(StructError::FieldMismatch {
@@ -251,7 +251,7 @@ impl XbfStruct {
         reader: &mut impl Read,
     ) -> io::Result<XbfStruct> {
         let mut struct_fields = vec![];
-        for (_, field_type) in metadata.fields.iter() {
+        for (_, field_type) in metadata.inner.fields.iter() {
             struct_fields.push(XbfType::deserialize_base_type(field_type, reader)?);
         }
         Ok(Self::new_unchecked(metadata.clone(), struct_fields))
@@ -320,6 +320,7 @@ impl XbfStruct {
     /// ```
     pub fn get(&self, field_name: &str) -> Option<&XbfType> {
         self.metadata
+            .inner
             .fields
             .get_index_of(field_name)
             .map(|i| &self.fields[i])
@@ -351,14 +352,18 @@ impl XbfStruct {
     /// assert_eq!(s.get("a"), Some(&new_value));
     /// ```
     pub fn set(&mut self, field_name: &str, field_data: XbfType) -> Option<XbfType> {
-        self.metadata.fields.get_index_of(field_name).and_then(|i| {
-            let current = &mut self.fields[i];
-            if XbfMetadata::from(&*current) != XbfMetadata::from(&field_data) {
-                None
-            } else {
-                Some(std::mem::replace(current, field_data))
-            }
-        })
+        self.metadata
+            .inner
+            .fields
+            .get_index_of(field_name)
+            .and_then(|i| {
+                let current = &mut self.fields[i];
+                if XbfMetadata::from(&*current) != XbfMetadata::from(&field_data) {
+                    None
+                } else {
+                    Some(std::mem::replace(current, field_data))
+                }
+            })
     }
 }
 
@@ -535,7 +540,7 @@ mod tests {
     #[test]
     fn struct_serde_works() {
         let primitive_metadata = XbfMetadata::Primitive(XbfPrimitiveMetadata::I32);
-        let vec_metadata = XbfMetadata::Vec(XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into()));
+        let vec_metadata = XbfMetadata::Vec(XbfVecMetadata::new(XbfPrimitiveMetadata::I32));
         let inner_struct_metadata = XbfStructMetadata::new(
             "test_struct".to_string(),
             indexmap! {
@@ -554,7 +559,7 @@ mod tests {
 
         let primitive = XbfPrimitive::I32(42);
         let vec = XbfVec::new_unchecked(
-            XbfVecMetadata::new(XbfPrimitiveMetadata::I32.into()),
+            XbfVecMetadata::new(XbfPrimitiveMetadata::I32),
             vec![primitive.to_base_type()],
         );
         let inner_struct = XbfStruct::new(inner_struct_metadata, vec![primitive.to_base_type()])
