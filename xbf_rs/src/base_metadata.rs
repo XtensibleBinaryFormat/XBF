@@ -104,6 +104,7 @@ mod private {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use indexmap::indexmap;
     use std::io::Cursor;
 
     #[test]
@@ -118,5 +119,37 @@ mod tests {
             should_be_err.to_string(),
             format!("Unknown metadata discriminant {bad_discriminant}")
         )
+    }
+
+    #[test]
+    fn primitive_conversion_works() {
+        let pmeta = XbfPrimitiveMetadata::I32;
+        let pmeta_ref = &pmeta;
+
+        assert_eq!(XbfMetadata::Primitive(pmeta), pmeta.into());
+        assert_eq!(XbfMetadata::Primitive(pmeta), pmeta_ref.into());
+    }
+
+    #[test]
+    fn vec_conversion_works() {
+        let vmeta = XbfVecMetadata::new(XbfMetadata::Primitive(XbfPrimitiveMetadata::I32));
+        let vmeta_ref = &vmeta.clone();
+
+        assert_eq!(XbfMetadata::Vec(vmeta.clone()), vmeta_ref.into());
+        assert_eq!(XbfMetadata::Vec(vmeta.clone()), vmeta.into());
+    }
+
+    #[test]
+    fn struct_conversion_works() {
+        let smeta = XbfStructMetadata::new(
+            "test",
+            indexmap! {
+                "a" => XbfPrimitiveMetadata::I32.into()
+            },
+        );
+        let smeta_ref = &smeta.clone();
+
+        assert_eq!(XbfMetadata::Struct(smeta.clone()), smeta_ref.into());
+        assert_eq!(XbfMetadata::Struct(smeta.clone()), smeta.into());
     }
 }
