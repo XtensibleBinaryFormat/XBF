@@ -19,5 +19,4 @@ xbf_threadsafe = []
 
 [[example]]
 name = "server"
-path = "examples/server.rs"
 required-features = ["xbf_threadsafe"]
