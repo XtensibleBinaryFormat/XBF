@@ -2,7 +2,7 @@ use std::io::{self, Read, Write};
 use xbf_rs::{XbfMetadata, XbfType};
 
 pub struct SerializedStorage {
-    value: XbfType,
+    _value: XbfType,
     serialized_metadata: Vec<u8>,
     serialized_value: Vec<u8>,
 }
@@ -22,14 +22,14 @@ impl SerializedStorage {
             .expect("serialization of value to internal buffer failed");
 
         Self {
-            value,
+            _value: value,
             serialized_metadata,
             serialized_value,
         }
     }
 
-    pub fn get_value(&self) -> &XbfType {
-        &self.value
+    pub fn _get_value(&self) -> &XbfType {
+        &self._value
     }
 
     pub fn write_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
@@ -40,7 +40,7 @@ impl SerializedStorage {
         writer.write_all(&self.serialized_value)
     }
 
-    pub fn from_reader(reader: &mut impl Read) -> io::Result<Self> {
+    pub fn _from_reader(reader: &mut impl Read) -> io::Result<Self> {
         let metadata = XbfMetadata::deserialize_base_metadata(reader)?;
         let value = XbfType::deserialize_base_type(&metadata, reader)?;
 
