@@ -28,6 +28,10 @@ impl SerializedStorage {
         }
     }
 
+    pub fn get_value(&self) -> &XbfType {
+        &self.value
+    }
+
     pub fn write_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_all(&self.serialized_metadata)
     }

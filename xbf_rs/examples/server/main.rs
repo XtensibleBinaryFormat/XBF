@@ -1,11 +1,12 @@
 mod storage;
 
 use crate::storage::SerializedStorage;
+use anyhow::{Context, Result};
 use byteorder::ReadBytesExt;
 use indexmap::indexmap;
 use std::{
-    io::{BufReader, BufWriter},
-    net::TcpListener,
+    io::{BufReader, BufWriter, Write},
+    net::{TcpListener, TcpStream},
 };
 use xbf_rs::{
     prelude::*, XbfPrimitive, XbfPrimitiveMetadata, XbfStruct, XbfStructMetadata, XbfVec,
@@ -35,22 +36,49 @@ impl DragonRider {
 
 #[repr(u8)]
 enum RequestType {
-    GetData = 0,
-    GetMetadataAndData,
+    GetMetadataAndData = 0,
+    GetData,
     Unknown,
 }
 
 impl From<u8> for RequestType {
     fn from(value: u8) -> Self {
         match value {
-            0 => Self::GetData,
-            1 => Self::GetMetadataAndData,
+            0 => Self::GetMetadataAndData,
+            1 => Self::GetData,
             _ => Self::Unknown,
         }
     }
 }
 
-fn main() {
+fn handle_request(stream: TcpStream, storage: &SerializedStorage) -> Result<()> {
+    let mut reader = BufReader::new(stream.try_clone().context("Unable to clone stream")?);
+    let mut writer = BufWriter::new(stream);
+
+    let request_type = reader.read_u8().context("Unable to read request type")?;
+    let request_type = RequestType::from(request_type);
+
+    match request_type {
+        RequestType::GetMetadataAndData => storage
+            .write_metadata(&mut writer)
+            .and_then(|_| storage.write_value(&mut writer)),
+        RequestType::GetData => storage.write_value(&mut writer),
+        RequestType::Unknown => {
+            let unknown_request_message = XbfPrimitive::String(
+                "Unknown request type, 0 is data, 1 is data and metadata".to_string(),
+            );
+            unknown_request_message
+                .get_metadata()
+                .serialize_primitive_metadata(&mut writer)
+                .and_then(|_| unknown_request_message.serialize_primitive_type(&mut writer))
+        }
+    }
+    .context("Unable to write response")?;
+
+    writer.flush().context("Unable to flush response")
+}
+
+fn main() -> Result<()> {
     let dragon_riders_storage = {
         let dragon_rider_metadata = XbfStructMetadata::new(
             "DragonRider",
@@ -72,52 +100,17 @@ fn main() {
         ))
     };
 
-    let unknown_request_message = XbfPrimitive::String("Unknown request type".to_string());
-
-    let stream = TcpListener::bind("127.0.0.1:6969").unwrap();
+    let stream = TcpListener::bind("127.0.0.1:6969").context("Unable to bind tcp listener")?;
 
     for stream in stream.incoming() {
-        if let Ok(stream) = stream {
-            let peer_addr = stream.peer_addr();
-            match peer_addr {
-                Ok(addr) => println!("Accepted connection from {addr}"),
-                Err(e) => {
-                    eprintln!("Unable to get peer address: {e}");
-                    continue;
-                }
-            }
+        let stream_result = stream
+            .context("Unable to accept connection")
+            .and_then(|stream| handle_request(stream, &dragon_riders_storage));
 
-            let mut reader = {
-                let cloned_stream = stream.try_clone();
-                match cloned_stream {
-                    Ok(stream) => BufReader::new(stream),
-                    Err(e) => {
-                        eprintln!("Unable to clone stream: {e}");
-                        continue;
-                    }
-                }
-            };
-            let mut writer = BufWriter::new(stream);
-
-            let response = reader.read_u8().and_then(|request_type| {
-                let request_type = RequestType::from(request_type);
-                match request_type {
-                    RequestType::GetData => dragon_riders_storage.write_metadata(&mut writer),
-                    RequestType::GetMetadataAndData => dragon_riders_storage
-                        .write_metadata(&mut writer)
-                        .and_then(|_| dragon_riders_storage.write_value(&mut writer)),
-                    RequestType::Unknown => unknown_request_message
-                        .get_metadata()
-                        .serialize_primitive_metadata(&mut writer)
-                        .and_then(|_| {
-                            unknown_request_message.serialize_primitive_type(&mut writer)
-                        }),
-                }
-            });
-
-            if let Err(e) = response {
-                eprintln!("Unable to write response: {e}");
-            }
+        if let Err(e) = stream_result {
+            eprintln!("{}", e);
         }
     }
+
+    Ok(())
 }
