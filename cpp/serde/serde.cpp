@@ -6,47 +6,36 @@
 #include <iomanip>
 #include "rust.hh"
 #include "metadata.hh"
+#include "Buffer.hh"
 using namespace std;
 
+// Forward declarations for functions
+template <typename T>
+void unchecked_write_vector(const std::vector<T>& v, Buffer& b);
 
-void dump(const stringstream& ss){
-    // TODO: display all bytes in HEX, display the length, reset the buffer
-    stringstream ss_copy(ss.str()); //crete a non const copy of the stringstream
+template <typename T>
+std::vector<T> unchecked_read_vector(Buffer& b);
 
-    const string& buffer = ss_copy.str();
-    const size_t length = buffer.length();
 
-    //display bytes in hex format
-    cout<<"Buffer bytes in HEX: ";
-    for(size_t i = 0; i < length; i++){
-        cout<< hex << setw(2) << setfill('0') << static_cast<int>(buffer[i]);
-    }
-    cout<< endl;
+class vec3d {
+private:
+    double x, y, z;
 
-    //display the length
-    cout<<" Buffer length: "<< length << " bytes " <<endl;
+public:
+    vec3d() : x(0.0), y(0.0), z(0.0) {} // Default constructor
 
-    //reset the Buffer
-    ss_copy.str(string());
-    ss_copy.clear();
-}
+    vec3d(double x, double y, double z) : x(x), y(y), z(z) {}
 
-class vec3d{
-  private:
-        double x, y, z;
-   public:
-        vec3d(double x, double y, double z) : x(x), y(y), z(z) {}
-         //TODO: make a function that generates metadata for this double
-         void gen_metadata(boost::archive::text_oarchive& oa)const{
-            oa << boost::serialization::make_nvp("x", x);
-            oa << boost::serialization::make_nvp("y", y);
-            oa << boost::serialization::make_nvp("z", z);
-         }
-    friend boost::archive::text_oarchive& operator <<(boost::archive::text_oarchive& oa, const vec3d& v){
-        v.gen_metadata(oa);
-        return oa;
+    // Serialize the vec3d object
+    template <class Archive>
+    void serialize(Archive& ar, const unsigned int version) {
+        ar & boost::serialization::make_nvp("x", x);
+        ar & boost::serialization::make_nvp("y", y);
+        ar & boost::serialization::make_nvp("z", z);
     }
 };
+
+BOOST_CLASS_EXPORT(vec3d)
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(Metadata)
 
@@ -55,30 +44,30 @@ BOOST_CLASS_EXPORT(VecMetadata)
 BOOST_CLASS_EXPORT(StructMetadata)
 
 
-void test_serde_vec_primitive(){
-    vector<bool> boolVec{ true, false, true };
-    vector<u8> u8Vec{ 1, 2, 3 };
-    vector<u16> u16Vec{ 1000, 2000, 3000 };
+void test_serde_vec_primitive(Buffer& b) {
+    vector<u8> boolVec{ 1, 0, 1 };
+    vector<u8> u8Vec{ 1, 2, 3, 0, 255 };
+    vector<u16> u16Vec{ 1000, 2000, 3000, 0, 65535 };
     vector<u32> u32Vec{ 1'000'000, 2'000'000, 3'000'000 };
     vector<u64> u64Vec{ 8'000'000'000ULL, 9'000'000'000ULL, 10'000'000'000ULL };
     // TODO: Add vectors for other primitive types
 
     // Serialization
-    stringstream ss;
-    boost::archive::text_oarchive oa(ss);
-    oa << boolVec << u8Vec << u16Vec << u32Vec << u64Vec;
+    unchecked_write_vector(boolVec, b);
+    unchecked_write_vector(u8Vec, b);
+    unchecked_write_vector(u16Vec, b);
+    unchecked_write_vector(u32Vec, b);
+    unchecked_write_vector(u64Vec, b);
+
     // TODO: Serialize other vectors
+    b.dump(cout);
 
     // Deserialization
-    boost::archive::text_iarchive ia(ss);
-    vector<bool> desBoolVec;
-    vector<u8> desU8Vec;
-    vector<u16> desU16Vec;
-    vector<u32> desU32Vec;
-    vector<u64> desU64Vec;
-    //TODO: Add vectors for other primitive types
-    ia >> desBoolVec >> desU8Vec >> desU16Vec >> desU32Vec >> desU64Vec;
-    //TODO: Deserialize other vectors
+    vector<u8> desBoolVec = unchecked_read_vector<u8>(b);
+    vector<u8> desU8Vec = unchecked_read_vector<u8>(b);
+    vector<u16> desU16Vec = unchecked_read_vector<u16>(b);
+    vector<u32> desU32Vec = unchecked_read_vector<u32>(b);
+    vector<u64> desU64Vec = unchecked_read_vector<u64>(b);
 
     // Assertions
     assert(boolVec == desBoolVec);
@@ -86,33 +75,28 @@ void test_serde_vec_primitive(){
     assert(u16Vec == desU16Vec);
     assert(u32Vec == desU32Vec);
     assert(u64Vec == desU64Vec);
-    // TODO:Add assertions for other vectors    
+    // TODO: Add assertions for other vectors    
 }
 
-void test_serde_vec_metadata() {
+
+void test_serde_vec_metadata(Buffer &b) {
     // Serialization
-    VecMetadata vecMetadata(new VecMetadata(new PrimitiveMetadata(PrimitiveType::U16)));
-    stringstream ss;
-    boost::archive::text_oarchive oa(ss);
-    oa << vecMetadata;
+    const PrimitiveType internalType = PrimitiveType::U16;
+    const PrimitiveType vecMetadata = internalType;
 
-    // Display serialized data
-    dump(ss);
-
+    b << vecMetadata;
+    b.dump(cout);
     // Deserialization
-    boost::archive::text_iarchive ia(ss);
-    VecMetadata desVecMetadata;
-    ia >> desVecMetadata;
+
+    PrimitiveType desVecMetadata;
+    b >> desVecMetadata;
 
     // Assertions
-    const Metadata* internalType = desVecMetadata.getInternalType();
-    assert(internalType != nullptr);
-    assert(internalType->getType() == PrimitiveType::U16);
+    assert(desVecMetadata == PrimitiveType::U16);
 }
 
-void test_serde_primitives(){
-    stringstream ss;
-        boost::archive::text_oarchive oa(ss);
+void test_serde_primitives(Buffer &b){
+
         bool b1 = false;
         u8 p1 = 3;
         u16 p2 = 1000;
@@ -131,12 +115,27 @@ void test_serde_primitives(){
         byte b2 = static_cast<byte>(1);
         string s1 = "hello";
     //serialization
-    oa << b1 << p1 << p2 << p3 << p4 << i1 << i2 << i3 << i4 << f1 << f2 << b2 << s1;
-    //calling dump function
-    dump(ss);
+    //b << b1 << p1 << p2 << p3 << p4 << i1 << i2 << i3 << i4 << f1 << f2 << b2 << s1;
+    b.unchecked_write(b1);
+    b.unchecked_write(p1);
+    b.unchecked_write(p2);
+    b.unchecked_write(p3);
+    b.unchecked_write(p4);
+    b.unchecked_write(i1);
+    b.unchecked_write(i2);
+    b.unchecked_write(i3);
+    b.unchecked_write(i4);
+    b.unchecked_write(f1);
+    b.unchecked_write(f2);
+    b.unchecked_write(b2);
+    b.unchecked_write(s1);
+
+    b.dump(cout);
+    b.reset_pointer_to_buffer();
+
     //deserialisation
-    boost::archive::text_iarchive ia(ss);
-    bool des_b1;
+
+    /*bool des_b1;
     u8 des_p1;
     u16 des_p2;
     u32 des_p3;
@@ -148,9 +147,23 @@ void test_serde_primitives(){
     f32 des_f1;
     f64 des_f2;
     byte des_b2;
-    string des_s1;
+    string des_s1;*/
+    bool des_b1 = b.unchecked_read<bool>();
+    u8 des_p1 = b.unchecked_read<u8>();
+    u16 des_p2 = b.unchecked_read<u16>();
+    u32 des_p3 = b.unchecked_read<u32>();
+    u64 des_p4 = b.unchecked_read<u64>();
+    i8 des_i1 = b.unchecked_read<i8>();
+    i16 des_i2 = b.unchecked_read<i16>();
+    i32 des_i3 = b.unchecked_read<i32>();
+    i64 des_i4 = b.unchecked_read<i64>();
+    f32 des_f1 = b.unchecked_read<f32>();
+    f64 des_f2 = b.unchecked_read<f64>();
+    byte des_b2 = b.unchecked_read<byte>();
+    string des_s1 = b.readString(); 
     
-    ia  >>  des_b1 >> des_p1 >> des_p2 >> des_p3 >> des_p4 >> des_i1 >> des_i2 >> des_i3 >> des_i4 >> des_f1>> des_f2 >> des_b2 >> des_s1;
+    //b  >>  des_b1 >> des_p1 >> des_p2 >> des_p3 >> des_p4 >> des_i1 >> des_i2 >> des_i3 >> des_i4 >> des_f1>> des_f2 >> des_b2 >> des_s1;
+    //cout << "p1: " << static_cast<int>(p1) << ", des_p1: " << static_cast<int>(des_p1) << endl; // Print the values for debugging
     assert(b1 == des_b1);
     assert(p1 == des_p1);
     assert(p2 == des_p2);
@@ -166,17 +179,23 @@ void test_serde_primitives(){
     assert(s1 == des_s1);
 }
 
-int main() {
-   
-   test_serde_primitives();
-   cout<<"COMPLETED SERDE"<<endl;
+void test_serde(){
 
-   //test case for serde vec metadata when the vec has a primitive
-   test_serde_vec_primitive();
+    Buffer b;
+    test_serde_primitives(b);
+   cout<<"COMPLETED PRIMITIVES"<<endl;
+
+    test_serde_vec_primitive(b);
    cout<<"completed serde vec metadata " << endl;
 
-   test_serde_vec_metadata();
+    //test case for serde vec metadata when the vec has a primitive
+    test_serde_vec_metadata(b);
     cout << "completed serde vec metadata with internal type " << endl;
+}
+
+int main() {
+    test_serde();
+    cout<<"Completeed Test Serde "<< endl;
 
     return 0;
 }
