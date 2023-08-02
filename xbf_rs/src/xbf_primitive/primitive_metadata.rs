@@ -1,4 +1,4 @@
-use crate::{XbfMetadataUpcast, XbfPrimitive};
+use crate::{XbfMetadata, XbfMetadataUpcast, XbfPrimitive};
 use byteorder::WriteBytesExt;
 use std::io::{self, Write};
 
@@ -42,8 +42,6 @@ impl XbfPrimitiveMetadata {
     pub fn serialize_primitive_metadata(&self, writer: &mut impl Write) -> io::Result<()> {
         writer.write_u8(*self as u8)
     }
-
-    // TODO: should there be a deserialize_primitive_metadata that wraps the TryFrom impl?
 }
 
 impl TryFrom<u8> for XbfPrimitiveMetadata {
@@ -76,7 +74,15 @@ impl TryFrom<u8> for XbfPrimitiveMetadata {
     }
 }
 
-impl XbfMetadataUpcast for XbfPrimitiveMetadata {}
+impl XbfMetadataUpcast for XbfPrimitiveMetadata {
+    fn into_base_metadata(self) -> crate::XbfMetadata {
+        XbfMetadata::Primitive(self)
+    }
+
+    fn to_base_metadata(&self) -> crate::XbfMetadata {
+        XbfMetadata::Primitive(*self)
+    }
+}
 
 impl From<&XbfPrimitive> for XbfPrimitiveMetadata {
     fn from(x: &XbfPrimitive) -> Self {
@@ -177,5 +183,54 @@ mod tests {
             XbfPrimitiveMetadata::try_from(XbfPrimitiveMetadata::String as u8 + 1).unwrap_err();
         assert_eq!(err.kind(), io::ErrorKind::InvalidData);
         assert_eq!(err.to_string(), "invalid primitive metadata");
+    }
+
+    macro_rules! primitive_metadata_from_primitive_test {
+        ($xbf_type:tt, $test_val:expr) => {
+            assert_eq!(
+                XbfPrimitiveMetadata::from(&XbfPrimitive::$xbf_type($test_val)),
+                XbfPrimitiveMetadata::$xbf_type
+            );
+            assert_eq!(
+                XbfPrimitive::$xbf_type($test_val).get_metadata(),
+                XbfPrimitiveMetadata::$xbf_type
+            );
+        };
+    }
+
+    #[test]
+    fn primitve_metadata_from_primitive_works() {
+        primitive_metadata_from_primitive_test!(Bool, true);
+        primitive_metadata_from_primitive_test!(U8, 1);
+        primitive_metadata_from_primitive_test!(U16, 1);
+        primitive_metadata_from_primitive_test!(U32, 1);
+        primitive_metadata_from_primitive_test!(U64, 1);
+        primitive_metadata_from_primitive_test!(U128, 1);
+        primitive_metadata_from_primitive_test!(U256, [1, 2, 3, 4]);
+        primitive_metadata_from_primitive_test!(I8, 1);
+        primitive_metadata_from_primitive_test!(I16, 1);
+        primitive_metadata_from_primitive_test!(I32, 1);
+        primitive_metadata_from_primitive_test!(I64, 1);
+        primitive_metadata_from_primitive_test!(I128, 1);
+        primitive_metadata_from_primitive_test!(I256, [1, 2, 3, 4]);
+        primitive_metadata_from_primitive_test!(F32, 1.0);
+        primitive_metadata_from_primitive_test!(F64, 1.0);
+        primitive_metadata_from_primitive_test!(Bytes, vec![1, 2, 3, 4]);
+        primitive_metadata_from_primitive_test!(String, "Hello World".to_string());
+    }
+
+    #[test]
+    fn upcast_works() {
+        let primitive_metadata = XbfPrimitiveMetadata::I32;
+        let primitive_metadata_ref = &primitive_metadata;
+
+        assert_eq!(
+            XbfMetadata::Primitive(primitive_metadata),
+            primitive_metadata_ref.to_base_metadata()
+        );
+        assert_eq!(
+            XbfMetadata::Primitive(primitive_metadata),
+            primitive_metadata.into_base_metadata()
+        );
     }
 }

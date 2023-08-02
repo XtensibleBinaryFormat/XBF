@@ -5,19 +5,19 @@ name: Rust
 
 env:
   CARGO_TERM_COLOR: always
-  SRC_DIR: 'xbf_rs'
+  SRC_DIR: "xbf_rs"
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main", "develop"]
     paths:
       - "xbf_rs/**"
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
       - "xbf_rs/**"
   schedule:
-    - cron: '00 18 * * *'
+    - cron: "00 18 * * *"
   workflow_dispatch:
     inputs:
       reason:
@@ -28,7 +28,7 @@ on:
 jobs:
   sanity-checks:
     name: Sanity checks (check, clippy) as expected on ${{ matrix.os }}
-    needs: [debug-tests,release-tests]
+    needs: [debug-tests, release-tests]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -39,12 +39,12 @@ jobs:
 
     # Sanity Checks
     steps:
-    - uses: actions/checkout@v3
-    - name: Check
-      run: cargo check --verbose
-    - name: Clippy
-      run: cargo clippy -- -D warnings
-  
+      - uses: actions/checkout@v3
+      - name: Check
+        run: cargo check --verbose
+      - name: Clippy
+        run: cargo clippy -- -D warnings
+
   debug-tests:
     name: Regular build and test (debug) on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -57,12 +57,12 @@ jobs:
 
     # Test in debug mode
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
-    
+      - uses: actions/checkout@v3
+      - name: Build
+        run: cargo build --verbose
+      - name: Run tests
+        run: cargo test --verbose
+
   release-tests:
     name: Regular build and test (release) on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -73,18 +73,17 @@ jobs:
       run:
         working-directory: ${{ env.SRC_DIR }}
 
-    # Test in release mode        
+    # Test in release mode
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose -r
-    - name: Run tests
-      run: cargo test --verbose -r
-  
-  
+      - uses: actions/checkout@v3
+      - name: Build
+        run: cargo build --verbose -r
+      - name: Run tests
+        run: cargo test --verbose -r
+
   hygiene-checks:
     name: Hygiene checks (audit, coverage, formatting) on ${{ matrix.os }}
-    needs: [release-tests,debug-tests,nightly-checks]
+    needs: [release-tests, debug-tests, nightly-checks]
     runs-on: ubuntu-latest
     container:
       image: xd009642/tarpaulin:develop-nightly
@@ -92,21 +91,20 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.SRC_DIR }}
-        
+
     # Extras
     steps:
-    - uses: actions/checkout@v3
-    - name: Rust Cache
-      uses: Swatinem/rust-cache@v2.4.0
-    - name: Setup
-      run: cargo install cargo-audit # and install dependencies
-    - name: Audit
-      run: cargo audit -D warnings
-    - name: Coverage
-      run: cargo tarpaulin --ignore-tests --run-types AllTargets Tests Benchmarks Bins Doctests Examples Lib --fail-under 90 --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
-    - name: Format
-      run: cargo fmt -- --check
-
+      - uses: actions/checkout@v3
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.4.0
+      - name: Setup
+        run: cargo install cargo-audit # and install dependencies
+      - name: Audit
+        run: cargo audit -D warnings
+      - name: Coverage
+        run: cargo tarpaulin --ignore-tests --run-types AllTargets Tests Benchmarks Bins Doctests Lib --fail-under 90 --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
+      - name: Format
+        run: cargo fmt -- --check
 
   nightly-checks:
     name: Nightly checks (build, test, Miri) on ${{ matrix.os }}
@@ -118,27 +116,27 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.SRC_DIR }}
-        
+
     # Extras
     steps:
-    - uses: actions/checkout@v3
-    - name: Install nightly and Miri
-      run: |
-        rustup toolchain install nightly --component miri
-        rustup override set nightly
-    - name: Build (release)
-      run: cargo build --verbose -r
-    - name: Run tests (release)
-      run: cargo test --verbose -r
-    - name: Clean previous
-      run: cargo clean
-    - name: Build (debug)
-      run: cargo build --verbose
-    - name: Run tests (debug)
-      run: cargo test --verbose
-    - name: Clean previous for Miri
-      run: |
-        cargo clean
-        cargo miri setup
-    - name: Run Miri
-      run: cargo miri test
+      - uses: actions/checkout@v3
+      - name: Install nightly and Miri
+        run: |
+          rustup toolchain install nightly --component miri
+          rustup override set nightly
+      - name: Build (release)
+        run: cargo build --verbose -r
+      - name: Run tests (release)
+        run: cargo test --verbose -r
+      - name: Clean previous
+        run: cargo clean
+      - name: Build (debug)
+        run: cargo build --verbose
+      - name: Run tests (debug)
+        run: cargo test --verbose
+      - name: Clean previous for Miri
+        run: |
+          cargo clean
+          cargo miri setup
+      - name: Run Miri
+        run: cargo miri test

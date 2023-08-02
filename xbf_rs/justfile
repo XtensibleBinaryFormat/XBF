@@ -36,5 +36,5 @@ docs:
 
 # serve docs with cargo-docs
 serve_docs port="42069":
-  cargo docs -w --port {{port}}
+  watchexec -r -w ./src/ "cargo doc && python3 -m http.server {{port}} --bind 127.0.0.1 --directory ./target/doc/"
 

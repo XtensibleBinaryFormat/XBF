@@ -16,3 +16,8 @@ pub use base_type::*;
 pub use xbf_primitive::*;
 pub use xbf_struct::*;
 pub use xbf_vec::*;
+
+#[cfg(not(feature = "xbf_threadsafe"))]
+use std::rc::Rc as RcType;
+#[cfg(feature = "xbf_threadsafe")]
+use std::sync::Arc as RcType;

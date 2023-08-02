@@ -42,65 +42,69 @@ impl XbfMetadata {
 
 impl From<XbfPrimitiveMetadata> for XbfMetadata {
     fn from(value: XbfPrimitiveMetadata) -> Self {
-        XbfMetadata::Primitive(value)
+        value.into_base_metadata()
     }
 }
 
 impl From<&XbfPrimitiveMetadata> for XbfMetadata {
     fn from(value: &XbfPrimitiveMetadata) -> Self {
-        XbfMetadata::Primitive(*value)
+        value.to_base_metadata()
     }
 }
 
 impl From<XbfVecMetadata> for XbfMetadata {
     fn from(value: XbfVecMetadata) -> Self {
-        XbfMetadata::Vec(value)
+        value.into_base_metadata()
     }
 }
 
 impl From<&XbfVecMetadata> for XbfMetadata {
     fn from(value: &XbfVecMetadata) -> Self {
-        XbfMetadata::Vec(value.clone())
+        value.to_base_metadata()
     }
 }
 
 impl From<XbfStructMetadata> for XbfMetadata {
     fn from(value: XbfStructMetadata) -> Self {
-        XbfMetadata::Struct(value)
+        value.into_base_metadata()
     }
 }
 
 impl From<&XbfStructMetadata> for XbfMetadata {
     fn from(value: &XbfStructMetadata) -> Self {
-        XbfMetadata::Struct(value.clone())
+        value.to_base_metadata()
     }
 }
 
 impl From<&XbfType> for XbfMetadata {
     fn from(value: &XbfType) -> Self {
         match value {
-            XbfType::Primitive(v) => XbfPrimitiveMetadata::from(v).to_base_metadata(),
-            XbfType::Vec(v) => XbfVecMetadata::from(v).to_base_metadata(),
-            XbfType::Struct(v) => XbfStructMetadata::from(v).to_base_metadata(),
+            XbfType::Primitive(v) => XbfPrimitiveMetadata::from(v).into(),
+            XbfType::Vec(v) => XbfVecMetadata::from(v).into(),
+            XbfType::Struct(v) => XbfStructMetadata::from(v).into(),
         }
     }
 }
 
-pub trait XbfMetadataUpcast: Into<XbfMetadata>
-where
-    XbfMetadata: for<'a> From<&'a Self>,
-{
-    fn into_base_metadata(self) -> XbfMetadata {
-        self.into()
-    }
-    fn to_base_metadata(&self) -> XbfMetadata {
-        self.into()
-    }
+pub trait XbfMetadataUpcast: private::Sealed {
+    fn into_base_metadata(self) -> XbfMetadata;
+    fn to_base_metadata(&self) -> XbfMetadata;
+}
+
+mod private {
+    use crate::{XbfPrimitiveMetadata, XbfStructMetadata, XbfVecMetadata};
+
+    pub trait Sealed {}
+
+    impl Sealed for XbfPrimitiveMetadata {}
+    impl Sealed for XbfVecMetadata {}
+    impl Sealed for XbfStructMetadata {}
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use indexmap::indexmap;
     use std::io::Cursor;
 
     #[test]
@@ -115,5 +119,37 @@ mod tests {
             should_be_err.to_string(),
             format!("Unknown metadata discriminant {bad_discriminant}")
         )
+    }
+
+    #[test]
+    fn primitive_conversion_works() {
+        let pmeta = XbfPrimitiveMetadata::I32;
+        let pmeta_ref = &pmeta;
+
+        assert_eq!(XbfMetadata::Primitive(pmeta), pmeta.into());
+        assert_eq!(XbfMetadata::Primitive(pmeta), pmeta_ref.into());
+    }
+
+    #[test]
+    fn vec_conversion_works() {
+        let vmeta = XbfVecMetadata::new(XbfMetadata::Primitive(XbfPrimitiveMetadata::I32));
+        let vmeta_ref = &vmeta.clone();
+
+        assert_eq!(XbfMetadata::Vec(vmeta.clone()), vmeta_ref.into());
+        assert_eq!(XbfMetadata::Vec(vmeta.clone()), vmeta.into());
+    }
+
+    #[test]
+    fn struct_conversion_works() {
+        let smeta = XbfStructMetadata::new(
+            "test",
+            indexmap! {
+                "a" => XbfPrimitiveMetadata::I32.into()
+            },
+        );
+        let smeta_ref = &smeta.clone();
+
+        assert_eq!(XbfMetadata::Struct(smeta.clone()), smeta_ref.into());
+        assert_eq!(XbfMetadata::Struct(smeta.clone()), smeta.into());
     }
 }
