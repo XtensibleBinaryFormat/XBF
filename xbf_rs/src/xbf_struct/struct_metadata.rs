@@ -147,13 +147,13 @@ impl XbfStructMetadata {
     ///
     /// let expected = {
     ///     let mut v = vec![STRUCT_METADATA_DISCRIMINANT];
-    ///     v.extend_from_slice((struct_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice((struct_name.len() as u64).to_le_bytes().as_slice());
     ///     v.extend_from_slice(struct_name.as_bytes());
     ///     v.extend_from_slice(2u16.to_le_bytes().as_slice());
-    ///     v.extend_from_slice((field1_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice((field1_name.len() as u64).to_le_bytes().as_slice());
     ///     v.extend_from_slice(field1_name.as_bytes());
     ///     v.extend_from_slice((XbfPrimitiveMetadata::I32 as u8).to_le_bytes().as_slice());
-    ///     v.extend_from_slice((field2_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice((field2_name.len() as u64).to_le_bytes().as_slice());
     ///     v.extend_from_slice(field2_name.as_bytes());
     ///     v.extend_from_slice((XbfPrimitiveMetadata::U64 as u8).to_le_bytes().as_slice());
     ///     v
@@ -198,13 +198,13 @@ impl XbfStructMetadata {
     ///
     /// let reader = (|| {
     ///     let mut v = vec![];
-    ///     v.extend_from_slice((struct_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice((struct_name.len() as u64).to_le_bytes().as_slice());
     ///     v.extend_from_slice(struct_name.as_bytes());
     ///     v.extend_from_slice(2u16.to_le_bytes().as_slice());
-    ///     v.extend_from_slice((field1_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice((field1_name.len() as u64).to_le_bytes().as_slice());
     ///     v.extend_from_slice(field1_name.as_bytes());
     ///     v.extend_from_slice((XbfPrimitiveMetadata::I32 as u8).to_le_bytes().as_slice());
-    ///     v.extend_from_slice((field2_name.len() as u16).to_le_bytes().as_slice());
+    ///     v.extend_from_slice((field2_name.len() as u64).to_le_bytes().as_slice());
     ///     v.extend_from_slice(field2_name.as_bytes());
     ///     v.extend_from_slice((XbfPrimitiveMetadata::U64 as u8).to_le_bytes().as_slice());
     ///     v

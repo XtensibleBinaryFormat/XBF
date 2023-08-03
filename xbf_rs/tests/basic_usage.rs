@@ -66,7 +66,7 @@ fn basic_serialization() {
     get_rider_metadata()
         .serialize_struct_metadata(&mut expected)
         .unwrap();
-    expected.extend_from_slice(&(xbf_vec_of_riders.len() as u16).to_le_bytes());
+    expected.extend_from_slice(&(xbf_vec_of_riders.len() as u64).to_le_bytes());
     for rider in &xbf_vec_of_riders {
         rider.serialize_base_type(&mut expected).unwrap();
     }
