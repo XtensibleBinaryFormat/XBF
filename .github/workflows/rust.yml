@@ -83,7 +83,7 @@ jobs:
 
   hygiene-checks:
     name: Hygiene checks (audit, coverage, formatting) on ${{ matrix.os }}
-    needs: [release-tests, debug-tests, nightly-checks]
+    #needs: [release-tests, debug-tests, nightly-checks]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
