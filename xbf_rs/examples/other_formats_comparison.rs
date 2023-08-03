@@ -54,7 +54,6 @@ async fn main() -> Result<()> {
 
     let response = client.get(target).send().await?;
     let csv_content = response.text().await?;
-
     println!("Base csv file size: {}", csv_content.as_bytes().len());
 
     let mut csv_reader = csv::Reader::from_reader(csv_content.as_bytes());
@@ -65,14 +64,19 @@ async fn main() -> Result<()> {
             Ok(record)
         })
         .collect::<Result<Vec<StockRecord>>>()?;
-
     println!(
         "native struct size: {}",
         std::mem::size_of::<StockRecord>() * records.len()
     );
 
-    let json_content = serde_json::to_string(&records)?;
+    let msgpack_content = rmp_serde::to_vec(&records)?;
+    println!("msgpack bytes size: {}", msgpack_content.len());
 
+    let mut ciborium_content = vec![];
+    ciborium::into_writer(&records, &mut ciborium_content)?;
+    println!("ciborium bytes size: {}", ciborium_content.len());
+
+    let json_content = serde_json::to_string(&records)?;
     println!("json file size: {}", json_content.as_bytes().len());
 
     let xml_vec = records
@@ -81,7 +85,6 @@ async fn main() -> Result<()> {
         .map(|record| XmlStockRecord::from(record))
         .collect::<Vec<XmlStockRecord>>();
     let xml_content = quick_xml::se::to_string_with_root("root", &xml_vec)?;
-
     println!("xml file size: {}", xml_content.as_bytes().len());
 
     let xbf_records = {
