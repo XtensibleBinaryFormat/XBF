@@ -84,10 +84,10 @@ jobs:
   hygiene-checks:
     name: Hygiene checks (audit, coverage, formatting) on ${{ matrix.os }}
     needs: [release-tests, debug-tests, nightly-checks]
-    runs-on: ubuntu-latest
-    container:
-      image: xd009642/tarpaulin:develop-nightly
-      options: --security-opt seccomp=unconfined
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
     defaults:
       run:
         working-directory: ${{ env.SRC_DIR }}
@@ -98,7 +98,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.4.0
       - name: Setup
-        run: cargo install cargo-audit # and install dependencies
+        run: cargo install cargo-audit cargo-tarpaulin # and install dependencies
       - name: Audit
         run: cargo audit -D warnings
       - name: Coverage
