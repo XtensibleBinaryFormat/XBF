@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
     let xml_vec = records
         .iter()
         .cloned()
-        .map(|record| XmlStockRecord::from(record))
+        .map(XmlStockRecord::from)
         .collect::<Vec<XmlStockRecord>>();
     let xml_content = quick_xml::se::to_string_with_root("root", &xml_vec)?;
     println!("xml file size: {}", xml_content.as_bytes().len());
