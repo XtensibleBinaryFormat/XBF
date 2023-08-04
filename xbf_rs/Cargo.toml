@@ -23,7 +23,3 @@ tokio = { version = "1.29.1", features = ["full"] }
 [features]
 default = ["xbf_threadsafe"]
 xbf_threadsafe = []
-
-[[example]]
-name = "server"
-required-features = ["xbf_threadsafe"]
