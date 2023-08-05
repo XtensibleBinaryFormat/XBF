@@ -98,6 +98,7 @@ fn to_xbf(records: &[StockRecord]) -> Result<Vec<u8>, std::io::Error> {
 }
 
 #[repr(u8)]
+#[derive(Debug)]
 enum RequestType {
     Csv,
     MessagePack,
@@ -134,6 +135,9 @@ async fn handle_request(mut stream: TcpStream, records: &[StockRecord]) -> anyho
         RequestType::Xbf => to_xbf(records)?,
         RequestType::Unknown => "bruh what".into(),
     };
+
+    eprintln!("request type: {:?}", request_type);
+    eprintln!("bytes to write: {}", bytes.len());
 
     stream.write_all(&bytes).await?;
     stream.flush().await?;
