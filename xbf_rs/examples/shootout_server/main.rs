@@ -1,10 +1,13 @@
-use std::io::Write;
-
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpStream,
+    net::{TcpListener, TcpStream},
+};
+use xbf_rs::{
+    NativeToXbfPrimitive, XbfPrimitiveMetadata, XbfStruct, XbfStructMetadata, XbfTypeUpcast,
+    XbfVec, XbfVecMetadata,
 };
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -51,6 +54,49 @@ fn to_cbor(records: &[StockRecord]) -> anyhow::Result<Vec<u8>> {
     Ok(vec)
 }
 
+fn to_json(records: &[StockRecord]) -> Result<Vec<u8>, serde_json::Error> {
+    Ok(serde_json::to_string(records)?.into_bytes())
+}
+
+fn to_xml(records: &[StockRecord]) -> Result<Vec<u8>, quick_xml::de::DeError> {
+    Ok(quick_xml::se::to_string(records)?.into_bytes())
+}
+
+fn to_xbf(records: &[StockRecord]) -> Result<Vec<u8>, std::io::Error> {
+    let sr_xbf_metadata = XbfStructMetadata::new(
+        "StockRecord",
+        indexmap::indexmap! {
+            "Open" => XbfPrimitiveMetadata::F64.into(),
+            "High" => XbfPrimitiveMetadata::F64.into(),
+            "Low" => XbfPrimitiveMetadata::F64.into(),
+            "Close" => XbfPrimitiveMetadata::F64.into(),
+            "AdjClose" => XbfPrimitiveMetadata::F64.into(),
+        },
+    );
+
+    let vec = XbfVec::new_unchecked(
+        XbfVecMetadata::new(sr_xbf_metadata.clone()),
+        records.into_iter().map(|record| {
+            XbfStruct::new_unchecked(
+                sr_xbf_metadata.clone(),
+                [
+                    record.open.to_xbf_primitive().into_base_type(),
+                    record.high.to_xbf_primitive().into_base_type(),
+                    record.low.to_xbf_primitive().into_base_type(),
+                    record.close.to_xbf_primitive().into_base_type(),
+                    record.adj_close.to_xbf_primitive().into_base_type(),
+                ],
+            )
+        }),
+    );
+
+    let mut bytes = vec![];
+    vec.get_metadata().serialize_vec_metadata(&mut bytes)?;
+    vec.serialize_vec_type(&mut bytes)?;
+
+    Ok(bytes)
+}
+
 #[repr(u8)]
 enum RequestType {
     Csv,
@@ -79,24 +125,18 @@ impl From<u8> for RequestType {
 async fn handle_request(mut stream: TcpStream, records: &[StockRecord]) -> anyhow::Result<()> {
     let request_type = RequestType::from(stream.read_u8().await?);
 
-    match request_type {
-        RequestType::Csv => {
-            let csv_content = to_csv(records)?;
-            stream.write_all(&csv_content).await?;
-        }
-        RequestType::MessagePack => {
-            let msgpack_content = to_msgpack(records)?;
-            stream.write_all(&msgpack_content).await?;
-        }
-        RequestType::Cbor => {
-            let cbor_content = to_cbor(records)?;
-            stream.write_all(&cbor_content).await?;
-        }
-        RequestType::Json => todo!(),
-        RequestType::Xml => todo!(),
-        RequestType::Xbf => todo!(),
-        RequestType::Unknown => todo!(),
-    }
+    let bytes = match request_type {
+        RequestType::Csv => to_csv(records)?,
+        RequestType::MessagePack => to_msgpack(records)?,
+        RequestType::Cbor => to_cbor(records)?,
+        RequestType::Json => to_json(records)?,
+        RequestType::Xml => to_xml(records)?,
+        RequestType::Xbf => to_xbf(records)?,
+        RequestType::Unknown => "bruh what".into(),
+    };
+
+    stream.write_all(&bytes).await?;
+    stream.flush().await?;
 
     Ok(())
 }
@@ -106,8 +146,19 @@ async fn main() -> anyhow::Result<()> {
     let native_data = {
         let csv_data = get_yahoo_data().await?;
         let native_data = get_native_vec_from_csv(&csv_data)?;
-        native_data
+        Arc::new(native_data)
     };
 
-    Ok(())
+    let listener = TcpListener::bind("0.0.0.0:42069").await?;
+
+    loop {
+        if let Ok((request, _)) = listener.accept().await {
+            let data = Arc::clone(&native_data);
+            tokio::spawn(async move {
+                if let Err(e) = handle_request(request, &data).await {
+                    eprintln!("{}", e);
+                }
+            });
+        }
+    }
 }
