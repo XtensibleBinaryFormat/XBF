@@ -59,7 +59,7 @@ fn to_json(records: &[StockRecord]) -> Result<Vec<u8>, serde_json::Error> {
 }
 
 fn to_xml(records: &[StockRecord]) -> Result<Vec<u8>, quick_xml::de::DeError> {
-    Ok(quick_xml::se::to_string(records)?.into_bytes())
+    Ok(quick_xml::se::to_string_with_root("root", records)?.into_bytes())
 }
 
 fn to_xbf(records: &[StockRecord]) -> Result<Vec<u8>, std::io::Error> {
@@ -158,6 +158,8 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let listener = TcpListener::bind("0.0.0.0:42069").await?;
+
+    eprintln!("server listening on 0.0.0.0:42069");
 
     loop {
         if let Ok((request, _)) = listener.accept().await {

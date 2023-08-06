@@ -1,4 +1,7 @@
-use std::{io::Read, net::TcpStream};
+use std::{
+    io::{Read, Write},
+    net::TcpStream,
+};
 
 use anyhow::Result;
 use byteorder::WriteBytesExt;
@@ -38,7 +41,9 @@ impl From<RequestType> for u8 {
 fn main() -> Result<()> {
     for i in 0..RequestType::Unknown.into() {
         let mut connection = TcpStream::connect("ece.stevens.edu:42069")?;
+        println!("connection made");
         connection.write_u8(i)?;
+        connection.flush()?;
 
         let mut buf = vec![];
         let response = connection.read_to_end(&mut buf)?;
