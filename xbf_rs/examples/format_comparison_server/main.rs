@@ -1,3 +1,4 @@
+use fake::{faker::address::en::StreetName, faker::name::en::Name, Dummy};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -10,7 +11,7 @@ use xbf_rs::{
     XbfVec, XbfVecMetadata,
 };
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize)]
 struct StockRecord {
     #[serde(rename = "Open")]
     open: f64,
@@ -22,6 +23,16 @@ struct StockRecord {
     close: f64,
     #[serde(rename(serialize = "AdjClose", deserialize = "Adj Close"))]
     adj_close: f64,
+}
+
+#[derive(Serialize, Dummy)]
+struct Person {
+    #[dummy(faker = "Name()")]
+    name: String,
+    #[dummy(faker = "1..120")]
+    age: u8,
+    #[dummy(faker = "StreetName()")]
+    address: String,
 }
 
 async fn get_yahoo_data() -> Result<String, reqwest::Error> {
@@ -38,31 +49,31 @@ fn get_native_vec_from_csv(csv_content: &str) -> Result<Vec<StockRecord>, csv::E
     csv_reader.deserialize::<StockRecord>().collect()
 }
 
-fn to_csv(records: &[StockRecord]) -> anyhow::Result<Vec<u8>> {
+fn to_csv<T: Serialize>(records: &[T]) -> anyhow::Result<Vec<u8>> {
     let mut csv_writer = csv::Writer::from_writer(vec![]);
     csv_writer.serialize(records)?;
     Ok(csv_writer.into_inner()?)
 }
 
-fn to_msgpack(records: &[StockRecord]) -> Result<Vec<u8>, rmp_serde::encode::Error> {
+fn to_msgpack<T: Serialize>(records: &[T]) -> Result<Vec<u8>, rmp_serde::encode::Error> {
     rmp_serde::to_vec(records)
 }
 
-fn to_cbor(records: &[StockRecord]) -> anyhow::Result<Vec<u8>> {
+fn to_cbor<T: Serialize>(records: &[T]) -> anyhow::Result<Vec<u8>> {
     let mut vec = vec![];
     ciborium::into_writer(&records, &mut vec)?;
     Ok(vec)
 }
 
-fn to_json(records: &[StockRecord]) -> Result<Vec<u8>, serde_json::Error> {
+fn to_json<T: Serialize>(records: &[T]) -> Result<Vec<u8>, serde_json::Error> {
     Ok(serde_json::to_string(records)?.into_bytes())
 }
 
-fn to_xml(records: &[StockRecord]) -> Result<Vec<u8>, quick_xml::de::DeError> {
+fn to_xml<T: Serialize>(records: &[T]) -> Result<Vec<u8>, quick_xml::de::DeError> {
     Ok(quick_xml::se::to_string_with_root("root", records)?.into_bytes())
 }
 
-fn to_xbf(records: &[StockRecord]) -> Result<Vec<u8>, std::io::Error> {
+fn stocks_to_xbf(records: &[StockRecord]) -> Result<Vec<u8>, std::io::Error> {
     let sr_xbf_metadata = XbfStructMetadata::new(
         "StockRecord",
         indexmap::indexmap! {
@@ -97,9 +108,58 @@ fn to_xbf(records: &[StockRecord]) -> Result<Vec<u8>, std::io::Error> {
     Ok(bytes)
 }
 
+fn people_to_xbf(records: &[Person]) -> Result<Vec<u8>, std::io::Error> {
+    let person_xbf_metadata = XbfStructMetadata::new(
+        "Person",
+        indexmap::indexmap! {
+            "Name" => XbfPrimitiveMetadata::String.into(),
+            "Age" => XbfPrimitiveMetadata::U8.into(),
+            "Address" => XbfPrimitiveMetadata::String.into(),
+        },
+    );
+
+    let vec = XbfVec::new_unchecked(
+        XbfVecMetadata::new(person_xbf_metadata.clone()),
+        records.into_iter().map(|person| {
+            XbfStruct::new_unchecked(
+                person_xbf_metadata.clone(),
+                [
+                    person.name.to_xbf_primitive().into_base_type(),
+                    person.age.to_xbf_primitive().into_base_type(),
+                    person.address.to_xbf_primitive().into_base_type(),
+                ],
+            )
+        }),
+    );
+
+    let mut bytes = vec![];
+    vec.get_metadata().serialize_vec_metadata(&mut bytes)?;
+    vec.serialize_vec_type(&mut bytes)?;
+
+    Ok(bytes)
+}
+
 #[repr(u8)]
 #[derive(Debug)]
 enum RequestType {
+    Stock,
+    Person,
+    Unknown,
+}
+
+impl From<u8> for RequestType {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Self::Stock,
+            1 => Self::Person,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(Debug)]
+enum DataFormat {
     Csv,
     MessagePack,
     Cbor,
@@ -109,7 +169,7 @@ enum RequestType {
     Unknown,
 }
 
-impl From<u8> for RequestType {
+impl From<u8> for DataFormat {
     fn from(value: u8) -> Self {
         match value {
             0 => Self::Csv,
@@ -123,52 +183,83 @@ impl From<u8> for RequestType {
     }
 }
 
-async fn handle_request(mut stream: TcpStream, records: &[StockRecord]) -> anyhow::Result<()> {
-    eprintln!("new request from: {}", stream.peer_addr()?);
+async fn handle_stock_request(
+    mut stream: TcpStream,
+    records: &[StockRecord],
+) -> anyhow::Result<()> {
+    let data_format = DataFormat::from(stream.read_u8().await?);
 
-    let request_type = RequestType::from(stream.read_u8().await?);
-    eprintln!("request type: {:?}", request_type);
-
-    let bytes = match request_type {
-        RequestType::Csv => to_csv(records)?,
-        RequestType::MessagePack => to_msgpack(records)?,
-        RequestType::Cbor => to_cbor(records)?,
-        RequestType::Json => to_json(records)?,
-        RequestType::Xml => to_xml(records)?,
-        RequestType::Xbf => to_xbf(records)?,
-        RequestType::Unknown => "Unknown request type".into(),
+    let bytes = match data_format {
+        DataFormat::Csv => to_csv(records)?,
+        DataFormat::MessagePack => to_msgpack(records)?,
+        DataFormat::Cbor => to_cbor(records)?,
+        DataFormat::Json => to_json(records)?,
+        DataFormat::Xml => to_xml(records)?,
+        DataFormat::Xbf => stocks_to_xbf(records)?,
+        DataFormat::Unknown => "Unknown request type".into(),
     };
-
-    eprintln!("number of bytes to write: {}", bytes.len());
 
     stream.write_all(&bytes).await?;
     stream.flush().await?;
 
-    eprintln!("bytes written successfully");
+    Ok(())
+}
+
+async fn handle_person_request(mut stream: TcpStream, records: &[Person]) -> anyhow::Result<()> {
+    let data_format = DataFormat::from(stream.read_u8().await?);
+
+    let bytes = match data_format {
+        DataFormat::Csv => to_csv(records)?,
+        DataFormat::MessagePack => to_msgpack(records)?,
+        DataFormat::Cbor => to_cbor(records)?,
+        DataFormat::Json => to_json(records)?,
+        DataFormat::Xml => to_xml(records)?,
+        DataFormat::Xbf => people_to_xbf(records)?,
+        DataFormat::Unknown => "Unknown request type".into(),
+    };
+
+    stream.write_all(&bytes).await?;
+    stream.flush().await?;
 
     Ok(())
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let native_data = {
+    let stock_data = {
         let csv_data = get_yahoo_data().await?;
+        eprintln!("original csv data size: {}", csv_data.as_bytes().len());
         let native_data = get_native_vec_from_csv(&csv_data)?;
         Arc::new(native_data)
     };
+    let person_data = Arc::new(fake::vec![Person; 300]);
 
     let listener = TcpListener::bind("0.0.0.0:42069").await?;
 
     eprintln!("server listening on 0.0.0.0:42069");
 
     loop {
-        if let Ok((request, _)) = listener.accept().await {
-            let data = Arc::clone(&native_data);
-            tokio::spawn(async move {
-                if let Err(e) = handle_request(request, &data).await {
-                    eprintln!("{}", e);
+        if let Ok((mut request, _)) = listener.accept().await {
+            let request_type = RequestType::from(request.read_u8().await?);
+            match request_type {
+                RequestType::Stock => {
+                    let data = Arc::clone(&stock_data);
+                    tokio::spawn(async move {
+                        if let Err(e) = handle_stock_request(request, &data).await {
+                            eprintln!("{}", e);
+                        }
+                    });
                 }
-            });
+                RequestType::Person => {
+                    let data = Arc::clone(&person_data);
+                    tokio::spawn(async move {
+                        if let Err(e) = handle_person_request(request, &data).await {
+                            eprintln!("{}", e);
+                        }
+                    });
+                }
+                _ => {}
+            }
         }
     }
 }
