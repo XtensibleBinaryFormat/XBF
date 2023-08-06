@@ -124,7 +124,10 @@ impl From<u8> for RequestType {
 }
 
 async fn handle_request(mut stream: TcpStream, records: &[StockRecord]) -> anyhow::Result<()> {
+    eprintln!("new request from: {}", stream.peer_addr()?);
+
     let request_type = RequestType::from(stream.read_u8().await?);
+    eprintln!("request type: {:?}", request_type);
 
     let bytes = match request_type {
         RequestType::Csv => to_csv(records)?,
@@ -133,14 +136,15 @@ async fn handle_request(mut stream: TcpStream, records: &[StockRecord]) -> anyho
         RequestType::Json => to_json(records)?,
         RequestType::Xml => to_xml(records)?,
         RequestType::Xbf => to_xbf(records)?,
-        RequestType::Unknown => "bruh what".into(),
+        RequestType::Unknown => "Unknown request type".into(),
     };
 
-    eprintln!("request type: {:?}", request_type);
-    eprintln!("bytes to write: {}", bytes.len());
+    eprintln!("number of bytes to write: {}", bytes.len());
 
     stream.write_all(&bytes).await?;
     stream.flush().await?;
+
+    eprintln!("bytes written successfully");
 
     Ok(())
 }
