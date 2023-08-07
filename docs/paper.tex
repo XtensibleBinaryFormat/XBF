@@ -1,0 +1,101 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Implementing XBF: An Efficient Self-Describing Binary Format}
+
+\author{
+	\IEEEauthorblockN{David Krauthamer}
+	\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+		\textit{name of organization (of Aff.)}\\
+		City, Country \\
+		dkrautha@pm.me}
+	\and
+	\IEEEauthorblockN{Dov Kruger}
+	\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+		\textit{name of organization (of Aff.)}\\
+		City, Country \\
+		email address or ORCID}
+	% \and
+	% \IEEEauthorblockN{3\textsuperscript{rd} Given Name Surname}
+	% \IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+	% 	\textit{name of organization (of Aff.)}\\
+	% 	City, Country \\
+	% 	email address or ORCID}
+}
+
+\maketitle
+
+\begin{abstract}
+	Do later
+\end{abstract}
+
+\begin{IEEEkeywords}
+	Data format, XML, JSON, Binary data
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+On the web, data is largely interchanged in one of two formats, XML (Extensible Markup Language)\cite{xml} or JSON (JavaScript Object Notation)\cite{json}. These formats have two key features that have led to their popularity, human-readability and being self-describing. These features have inherent inefficiencies, which XBF (Xtensible Binary Format)\cite{xbf_spec} intends to solve by making compromises.
+
+\subsection{Self-Description}
+
+A self-describing format is a format in which a recipient is not required to have a schema for the incoming data, and the names and types of the data being sent can be determined from the data itself. The following is an example of XML:
+
+\begin{lstlisting}[language=XML]
+<person>
+	<name>John Jackson</name>
+	<age>25</age>
+</person>
+\end{lstlisting}
+
+This example represents a person object with two fields, a string name and integer age. The downside to being self-describing is wasted characters on the metadata describing the object. In this particular example, 14 characters of the 59 total characters actually contain the desired data, the rest are just describing the metadata. The best thing a format can do is minimize this overhead as much as possible, it cannot be eliminated while still being self-describing.
+
+An additional optimization that could be made (but isn't with either of these formats) is deduplication of the metadata. Both JSON and XML include the metadata for every element sent, even if what is being sent is a homogenous list of elements that all share the same structure.
+
+\subsection{Human Readability}
+
+A human-readable format is one where data is encoded entirely as ASCII or UTF-8 characters, and formatted in such a way that a person could easily read or write it without the need of a machine. Human-readability brings with it two inefficiencies, the need to parse text data into a binary format that a computer understands, and additional overhead from whitespace characters.
+
+\subsection{Enhancements to be Made}
+
+With the inefficiencies of these two formats in mind, XBF seeks to improve on them through a few core design decisions:
+
+\begin{IEEEitemize}
+	\item Send data and metadata in a binary format (no longer human-readable)
+	\item Remain self-describing, but have the option to not include metadata if it's already known
+	\item Prioritize simplicity in the type system
+\end{IEEEitemize}
+
+% \begin{table}[htbp]
+% 	\caption{Table Type Styles}
+% 	\begin{center}
+% 		\begin{tabular}{|c|c|c|c|}
+% 			\hline
+% 			\textbf{Table} & \multicolumn{3}{|c|}{\textbf{Table Column Head}}                                                         \\
+% 			\cline{2-4}
+% 			\textbf{Head}  & \textbf{\textit{Table column subhead}}           & \textbf{\textit{Subhead}} & \textbf{\textit{Subhead}} \\
+% 			\hline
+% 			copy           & More table copy$^{\mathrm{a}}$                   &                           &                           \\
+% 			\hline
+% 			\multicolumn{4}{l}{$^{\mathrm{a}}$Sample of a Table footnote.}
+% 		\end{tabular}
+% 		\label{tab1}
+% 	\end{center}
+% \end{table}
+
+\section*{Acknowledgment}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+\end{document}
