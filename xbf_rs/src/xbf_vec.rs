@@ -120,12 +120,12 @@ impl XbfVec {
     /// vec.serialize_vec_type(&mut writer).unwrap();
     ///
     /// let mut expected = vec![];
-    /// expected.extend_from_slice(&1u16.to_le_bytes());
+    /// expected.extend_from_slice(&1u64.to_le_bytes());
     /// expected.extend_from_slice(&42u32.to_le_bytes());
     /// assert_eq!(writer, expected);
     /// ```
     pub fn serialize_vec_type(&self, writer: &mut impl Write) -> io::Result<()> {
-        writer.write_u16::<LittleEndian>(self.elements.len() as u16)?;
+        writer.write_u64::<LittleEndian>(self.elements.len() as u64)?;
         self.elements
             .iter()
             .try_for_each(|e| e.serialize_base_type(writer))
@@ -149,7 +149,7 @@ impl XbfVec {
     ///
     /// let metadata = XbfVecMetadata::new(XbfPrimitiveMetadata::I32);
     /// let mut reader = vec![];
-    /// reader.extend_from_slice(&1u16.to_le_bytes());
+    /// reader.extend_from_slice(&1u64.to_le_bytes());
     /// reader.extend_from_slice(&42u32.to_le_bytes());
     /// let mut reader = std::io::Cursor::new(reader);
     ///
@@ -163,7 +163,7 @@ impl XbfVec {
         reader: &mut impl Read,
     ) -> io::Result<XbfVec> {
         let inner_type = &metadata.inner_type;
-        let len = reader.read_u16::<LittleEndian>()? as usize;
+        let len = reader.read_u64::<LittleEndian>()? as usize;
         let mut elements = Vec::with_capacity(len);
         for _ in 0..len {
             elements.push(XbfType::deserialize_base_type(inner_type, reader)?);
@@ -278,7 +278,7 @@ mod tests {
         vec.serialize_vec_type(&mut writer).unwrap();
 
         let mut expected = vec![];
-        expected.extend_from_slice(&1u16.to_le_bytes());
+        expected.extend_from_slice(&1u64.to_le_bytes());
         expected.extend_from_slice(&TEST_NUM.to_le_bytes());
 
         assert_eq!(writer, expected);
@@ -313,11 +313,11 @@ mod tests {
         vec_of_vec_of_i32.serialize_vec_type(&mut writer).unwrap();
 
         let mut expected = vec![];
-        expected.extend_from_slice(&2u16.to_le_bytes());
-        expected.extend_from_slice(&2u16.to_le_bytes());
+        expected.extend_from_slice(&2u64.to_le_bytes());
+        expected.extend_from_slice(&2u64.to_le_bytes());
         expected.extend_from_slice(&TEST_NUM.to_le_bytes());
         expected.extend_from_slice(&TEST_NUM.to_le_bytes());
-        expected.extend_from_slice(&2u16.to_le_bytes());
+        expected.extend_from_slice(&2u64.to_le_bytes());
         expected.extend_from_slice(&TEST_NUM.to_le_bytes());
         expected.extend_from_slice(&TEST_NUM.to_le_bytes());
 
@@ -328,7 +328,7 @@ mod tests {
     fn deserialize_vec_primitive_works() {
         const TEST_NUM: i32 = 42;
         let mut data = vec![];
-        data.extend_from_slice(&1u16.to_le_bytes());
+        data.extend_from_slice(&1u64.to_le_bytes());
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
         let mut reader = Cursor::new(data);
 
@@ -348,11 +348,11 @@ mod tests {
     fn deserialize_vec_of_vec_works() {
         const TEST_NUM: i32 = 42;
         let mut data = vec![];
-        data.extend_from_slice(&2u16.to_le_bytes());
-        data.extend_from_slice(&2u16.to_le_bytes());
+        data.extend_from_slice(&2u64.to_le_bytes());
+        data.extend_from_slice(&2u64.to_le_bytes());
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
-        data.extend_from_slice(&2u16.to_le_bytes());
+        data.extend_from_slice(&2u64.to_le_bytes());
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
         data.extend_from_slice(&TEST_NUM.to_le_bytes());
         let mut reader = Cursor::new(data);

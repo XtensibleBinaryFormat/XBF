@@ -8,12 +8,16 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 byteorder = "1"
 indexmap = "2.0.0"
+rand = "0.8.5"
 
 [dev-dependencies]
 anyhow = "1.0"
+ciborium = "0.2.1"
 csv = "1.2"
+fake = { version = "2.6", features = ['derive'] }
 quick-xml = { version = "0.30.0", features = ["serialize"] }
 reqwest = "0.11.18"
+rmp-serde = "1.1"
 serde = { version = "1.0.179", features = ["derive"] }
 serde_json = "1.0.104"
 tokio = { version = "1.29.1", features = ["full"] }
@@ -21,7 +25,3 @@ tokio = { version = "1.29.1", features = ["full"] }
 [features]
 default = ["xbf_threadsafe"]
 xbf_threadsafe = []
-
-[[example]]
-name = "server"
-required-features = ["xbf_threadsafe"]

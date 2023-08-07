@@ -376,7 +376,7 @@ mod tests {
             primitive.serialize_primitive_type(&mut writer).unwrap();
 
             let mut expected_writer = vec![];
-            expected_writer.extend_from_slice(&(test_string.len() as u16).to_le_bytes());
+            expected_writer.extend_from_slice(&(test_string.len() as u64).to_le_bytes());
             expected_writer.extend_from_slice(test_string.as_bytes());
 
             assert_eq!(writer, expected_writer);
@@ -403,7 +403,7 @@ mod tests {
             primitive.serialize_primitive_type(&mut writer).unwrap();
 
             let mut expected = vec![];
-            expected.extend_from_slice(&(test_bytes.len() as u16).to_le_bytes());
+            expected.extend_from_slice(&(test_bytes.len() as u64).to_le_bytes());
             expected.extend_from_slice(&test_bytes);
 
             assert_eq!(writer, expected);
