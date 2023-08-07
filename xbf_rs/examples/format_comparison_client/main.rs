@@ -1,11 +1,6 @@
-use std::{
-    io::{Read, Write},
-    net::TcpStream,
-    time::Instant,
-};
-
 use anyhow::Result;
 use byteorder::WriteBytesExt;
+use std::{io::Read, net::TcpStream, time::Instant};
 
 #[repr(u8)]
 #[derive(Debug)]
@@ -64,36 +59,43 @@ impl From<DataFormat> for u8 {
 }
 
 fn main() -> Result<()> {
-    let mut times = vec![vec![vec![]; 6]; 2];
-
-    for _ in 0..500 {
-        for request_type in 0..RequestType::Unknown.into() {
-            for data_format in 0..DataFormat::Unknown.into() {
-                let time_start = Instant::now();
-
-                let mut connection = TcpStream::connect("127.0.0.1:42069")?;
-                connection.write_u8(request_type)?;
-                connection.write_u8(data_format)?;
-                connection.flush()?;
-
-                let mut buf = vec![];
-                connection.read_to_end(&mut buf)?;
-
-                let time_elapsed = Instant::now() - time_start;
-                times[request_type as usize][data_format as usize].push(time_elapsed);
-            }
-        }
-    }
+    let addr = format!(
+        "{}:42069",
+        std::env::args().nth(1).unwrap_or("127.0.0.1".to_string())
+    );
 
     for request_type in 0..RequestType::Unknown.into() {
         for data_format in 0..DataFormat::Unknown.into() {
-            let entry = &times[request_type as usize][data_format as usize];
-            let avg_time = entry.iter().sum::<std::time::Duration>() / entry.len() as u32;
+            let mut durations = vec![];
+            let mut bytes_read = None;
+
+            for _ in 0..100 {
+                let time_start = Instant::now();
+
+                let mut connection = TcpStream::connect(&addr)?;
+                connection.write_u8(request_type)?;
+                connection.write_u8(data_format)?;
+
+                let mut buf = vec![];
+                let bytes = connection.read_to_end(&mut buf)?;
+
+                let time_elapsed = Instant::now() - time_start;
+
+                if let None = bytes_read {
+                    bytes_read = Some(bytes);
+                }
+
+                durations.push(time_elapsed);
+            }
+
+            let avg_time = durations.iter().sum::<std::time::Duration>() / durations.len() as u32;
+
             println!(
-                "Request Type: {:?}, Data Format: {:?}, Avg Time: {:?}",
+                "Request Type: {:?}\nData Format: {:?}\nAvg Time: {:?}\nBytes Read: {:?}\n",
                 RequestType::from(request_type),
                 DataFormat::from(data_format),
-                avg_time
+                avg_time,
+                bytes_read
             );
         }
     }

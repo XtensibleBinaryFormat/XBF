@@ -188,6 +188,7 @@ async fn handle_stock_request(
     records: &[StockRecord],
 ) -> anyhow::Result<()> {
     let data_format = DataFormat::from(stream.read_u8().await?);
+    eprintln!("data format: {:?}", data_format);
 
     let bytes = match data_format {
         DataFormat::Csv => to_csv(records)?,
@@ -228,19 +229,34 @@ async fn handle_person_request(mut stream: TcpStream, records: &[Person]) -> any
 async fn main() -> anyhow::Result<()> {
     let stock_data = {
         let csv_data = get_yahoo_data().await?;
-        eprintln!("original csv data size: {}", csv_data.as_bytes().len());
+        println!(
+            "original stock csv data size: {}",
+            csv_data.as_bytes().len()
+        );
         let native_data = get_native_vec_from_csv(&csv_data)?;
         Arc::new(native_data)
     };
-    let person_data = Arc::new(fake::vec![Person; 300]);
+    let person_data = {
+        let data = Arc::new(fake::vec![Person; 500]);
+        let total_size = data.iter().fold(0usize, |acc, x| {
+            let name_size = x.name.as_bytes().len();
+            let address_size = x.address.as_bytes().len();
+            let age_size = std::mem::size_of::<u8>();
+            acc + name_size + address_size + age_size
+        });
+        println!("original random person data size: {}", total_size);
+        data
+    };
 
     let listener = TcpListener::bind("0.0.0.0:42069").await?;
-
     eprintln!("server listening on 0.0.0.0:42069");
 
     loop {
         if let Ok((mut request, _)) = listener.accept().await {
+            eprintln!("connection from {}", request.peer_addr()?);
             let request_type = RequestType::from(request.read_u8().await?);
+            eprintln!("request type: {:?}", request_type);
+
             match request_type {
                 RequestType::Stock => {
                     let data = Arc::clone(&stock_data);
