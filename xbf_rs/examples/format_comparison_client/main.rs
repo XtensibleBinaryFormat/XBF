@@ -64,40 +64,36 @@ fn main() -> Result<()> {
         std::env::args().nth(1).unwrap_or("127.0.0.1".to_string())
     );
 
-    for request_type in 0..RequestType::Unknown.into() {
-        for data_format in 0..DataFormat::Unknown.into() {
-            let mut durations = vec![];
-            let mut bytes_read = None;
+    for data_format in 0..DataFormat::Unknown.into() {
+        let mut durations = vec![];
+        let mut bytes_read = None;
 
-            for _ in 0..100 {
-                let time_start = Instant::now();
+        for _ in 0..100 {
+            let time_start = Instant::now();
 
-                let mut connection = TcpStream::connect(&addr)?;
-                connection.write_u8(request_type)?;
-                connection.write_u8(data_format)?;
+            let mut connection = TcpStream::connect(&addr)?;
+            connection.write_u8(data_format)?;
 
-                let mut buf = vec![];
-                let bytes = connection.read_to_end(&mut buf)?;
+            let mut buf = vec![];
+            let bytes = connection.read_to_end(&mut buf)?;
 
-                let time_elapsed = Instant::now() - time_start;
+            let time_elapsed = Instant::now() - time_start;
 
-                if let None = bytes_read {
-                    bytes_read = Some(bytes);
-                }
-
-                durations.push(time_elapsed);
+            if let None = bytes_read {
+                bytes_read = Some(bytes);
             }
 
-            let avg_time = durations.iter().sum::<std::time::Duration>() / durations.len() as u32;
-
-            println!(
-                "Request Type: {:?}\nData Format: {:?}\nAvg Time: {:?}\nBytes Read: {:?}\n",
-                RequestType::from(request_type),
-                DataFormat::from(data_format),
-                avg_time,
-                bytes_read
-            );
+            durations.push(time_elapsed);
         }
+
+        let avg_time = durations.iter().sum::<std::time::Duration>() / durations.len() as u32;
+
+        println!(
+            "Data Format: {:?}\nAvg Time: {:?}\nBytes Read: {:?}\n",
+            DataFormat::from(data_format),
+            avg_time,
+            bytes_read
+        );
     }
 
     Ok(())
