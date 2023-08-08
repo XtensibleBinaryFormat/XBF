@@ -77,7 +77,23 @@ With the inefficiencies of these two formats in mind, XBF seeks to improve on th
 	\item Prioritize simplicity in the type system.
 \end{IEEEitemize}
 
-\section{Methodology and Implementation}
+\section{Format Design}
+
+\section{Implementation}
+
+\section{Evaluation}
+
+XBF was evaluated against a number of other self-describing data interchange formats.
+
+\begin{IEEEitemize}
+	\item CSV (Comma Separated Values) \cite{csv_spec}\cite{csv_parser}
+	\item MessagePack \cite{msgpack_spec}\cite{msgpack_parser}
+	\item CBOR (Concise Binary Object Representation) \cite{cbor_spec}\cite{cbor_parser}
+	\item JSON \cite{json_parser}
+	\item XML \cite{xml_parser}
+\end{IEEEitemize}
+
+The primary goal of the test was to measure how many bytes a particular format required to transmit a given set of data, with the secondary objective being to measure the timed performance of the format. The data\cite{sony_stock_data} was a year of.
 
 \section{Results}
 
