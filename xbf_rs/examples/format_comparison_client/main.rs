@@ -4,30 +4,6 @@ use std::{io::Read, net::TcpStream, time::Instant};
 
 #[repr(u8)]
 #[derive(Debug)]
-enum RequestType {
-    Stock,
-    Person,
-    Unknown,
-}
-
-impl From<u8> for RequestType {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => Self::Stock,
-            1 => Self::Person,
-            _ => Self::Unknown,
-        }
-    }
-}
-
-impl From<RequestType> for u8 {
-    fn from(value: RequestType) -> Self {
-        value as u8
-    }
-}
-
-#[repr(u8)]
-#[derive(Debug)]
 enum DataFormat {
     Csv,
     MessagePack,
@@ -35,6 +11,7 @@ enum DataFormat {
     Json,
     Xml,
     Xbf,
+    XbfDataOnly,
     Unknown,
 }
 
@@ -47,6 +24,7 @@ impl From<u8> for DataFormat {
             3 => Self::Json,
             4 => Self::Xml,
             5 => Self::Xbf,
+            6 => Self::XbfDataOnly,
             _ => Self::Unknown,
         }
     }
@@ -79,7 +57,7 @@ fn main() -> Result<()> {
 
             let time_elapsed = Instant::now() - time_start;
 
-            if let None = bytes_read {
+            if bytes_read.is_none() {
                 bytes_read = Some(bytes);
             }
 

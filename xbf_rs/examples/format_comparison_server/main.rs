@@ -68,7 +68,7 @@ fn to_xml<T: Serialize>(records: &[T]) -> Result<Vec<u8>, quick_xml::de::DeError
     Ok(quick_xml::se::to_string_with_root("root", records)?.into_bytes())
 }
 
-fn stocks_to_xbf(records: &[StockRecord]) -> Result<Vec<u8>, std::io::Error> {
+fn create_xbf_vec(records: &[StockRecord]) -> XbfVec {
     let sr_xbf_metadata = XbfStructMetadata::new(
         "StockRecord",
         indexmap::indexmap! {
@@ -82,9 +82,9 @@ fn stocks_to_xbf(records: &[StockRecord]) -> Result<Vec<u8>, std::io::Error> {
         },
     );
 
-    let vec = XbfVec::new_unchecked(
+    XbfVec::new_unchecked(
         XbfVecMetadata::new(sr_xbf_metadata.clone()),
-        records.into_iter().map(|record| {
+        records.iter().map(|record| {
             XbfStruct::new_unchecked(
                 sr_xbf_metadata.clone(),
                 [
@@ -97,8 +97,19 @@ fn stocks_to_xbf(records: &[StockRecord]) -> Result<Vec<u8>, std::io::Error> {
                 ],
             )
         }),
-    );
+    )
+}
 
+fn to_xbf(records: &[StockRecord]) -> Result<Vec<u8>, std::io::Error> {
+    let vec = create_xbf_vec(records);
+    let mut bytes = vec![];
+    vec.serialize_vec_type(&mut bytes)?;
+
+    Ok(bytes)
+}
+
+fn to_xbf_data_only(records: &[StockRecord]) -> Result<Vec<u8>, std::io::Error> {
+    let vec = create_xbf_vec(records);
     let mut bytes = vec![];
     vec.get_metadata().serialize_vec_metadata(&mut bytes)?;
     vec.serialize_vec_type(&mut bytes)?;
@@ -115,6 +126,7 @@ enum DataFormat {
     Json,
     Xml,
     Xbf,
+    XbfDataOnly,
     Unknown,
 }
 
@@ -127,6 +139,7 @@ impl From<u8> for DataFormat {
             3 => Self::Json,
             4 => Self::Xml,
             5 => Self::Xbf,
+            6 => Self::XbfDataOnly,
             _ => Self::Unknown,
         }
     }
@@ -145,7 +158,8 @@ async fn handle_stock_request(
         DataFormat::Cbor => to_cbor(records)?,
         DataFormat::Json => to_json(records)?,
         DataFormat::Xml => to_xml(records)?,
-        DataFormat::Xbf => stocks_to_xbf(records)?,
+        DataFormat::Xbf => to_xbf(records)?,
+        DataFormat::XbfDataOnly => to_xbf_data_only(records)?,
         DataFormat::Unknown => "Unknown request type".into(),
     };
 
