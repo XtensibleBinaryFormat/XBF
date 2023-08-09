@@ -82,6 +82,8 @@ With the inefficiencies of these two formats in mind, XBF seeks to improve on th
 
 Should this section be here / how in depth should this go? Should this mainly just be a reference to the spec / the paper written by Dov, or should more be spoken about here?
 
+Similar to CSV (cite here?), we send a single header up front, followed by all of the data. For a primitive type there isn't much savings here, but there are massive savings with vectors and structs. With a vector the metadata is a discriminant indicating a vector is being sent, which is then follwed by the metadata for its internal type. This process continues recursively if the inner type (or any of its inner types) contains a vector or struct, ensuring that all metadata necessary to represent the data coming afterwards is received up front. The data is then sent in a single continuous block, something after this...
+
 \section{Implementation}
 
 The reference implementation for XBF\cite{xbf_impl} was written in Rust. Rust was chosen for the following reasons:
@@ -91,6 +93,45 @@ The reference implementation for XBF\cite{xbf_impl} was written in Rust. Rust wa
 	\item Control over the allocation and de-allocation of memory.
 	\item Rust provides statically checked memory safety.
 \end{IEEEitemize}
+
+\subsection{Primitives}
+
+The implementation of primitives is a tagged union of all possible primitive types, mapping the XBF type to the Rust native equivalent as shown in Table \ref{type_map}. The exceptions are the 256 bit integer types, which do not have an analog, and are instead represented by an array of four unsigned 64 bit integers.
+
+Metadata for integers was an enumeration of the possible metadata discriminants, ranging from 0 to 16, represented as unsigned 8 bit integers.
+
+\begin{table}[htbp]
+	\caption{XBF Type Map}\label{type_map}
+	\begin{center}
+		\begin{tabular}{|c|c|}
+			\hline
+			\textbf{XBF Type} & \textbf{Rust Type}          \\
+			\hline
+			Boolean           & bool                        \\
+			U8                & u8                          \\
+			U16               & u16                         \\
+			U32               & u32                         \\
+			U64               & u64                         \\
+			U128              & u128                        \\
+			U256              & [u64; 4]                    \\
+			I8                & i8                          \\
+			I16               & i16                         \\
+			I32               & i32                         \\
+			I64               & i64                         \\
+			I128              & i128                        \\
+			I256              & [u64; 4]                    \\
+			F32               & f32                         \\
+			F64               & f64                         \\
+			Bytes             & Vec\textless u8\textgreater \\
+			String            & String                      \\
+			\hline
+		\end{tabular}
+	\end{center}
+\end{table}
+
+\subsection{Vectors}
+
+\subsection{Structs}
 
 \section{Evaluation}
 
@@ -113,6 +154,7 @@ The server was a DigitalOcean Droplet\cite{digital_ocean} running Ubuntu 20.04.5
 \section{Results}
 
 \begin{table}[htbp]
+	\caption{Average Time and Bytes Read}
 	\begin{center}
 		\begin{tabular}{|c|c|c|}
 			\hline
@@ -130,6 +172,7 @@ The server was a DigitalOcean Droplet\cite{digital_ocean} running Ubuntu 20.04.5
 \end{table}
 
 \begin{table}[htbp]
+	\caption{Format Overheads}
 	\begin{center}
 		\begin{tabular}{|c|c|c|}
 			\hline
