@@ -80,7 +80,17 @@ With the inefficiencies of these two formats in mind, XBF seeks to improve on th
 
 \section{Format Design}
 
+Should this section be here / how in depth should this go? Should this mainly just be a reference to the spec / the paper written by Dov, or should more be spoken about here?
+
 \section{Implementation}
+
+The reference implementation for XBF\cite{xbf_impl} was written in Rust. Rust was chosen for the following reasons:
+\begin{IEEEitemize}
+	\item Rust is statically typed and compiled, and allows for similarly efficient code generation to C/C++.
+	\item A powerful type system with tagged unions built in such that dynamic dispatch and virtual method tables weren't required.
+	\item Control over the allocation and de-allocation of memory.
+	\item Rust provides statically checked memory safety.
+\end{IEEEitemize}
 
 \section{Evaluation}
 
@@ -94,9 +104,11 @@ XBF was evaluated against a number of other self-describing data interchange for
 	\item XML\cite{xml_parser}
 \end{IEEEitemize}
 
-The test consisted of two components, a client and a server, both written in Rust. The server downloads a year of Sony stock data from Yahoo Finance\cite{sony_stock_data} in CSV format, and parses it into a list of objects. The original size of the CSV and a calculated value for how much memory is taken up by the parsed list is logged. It then waits for connections, and depending on the request received, serializes the list of objects into the requested format and sends it to the client. The serialized data is not cached, and the serialization is performed for each request.
+The test consisted of two components, a client and a server, both written in Rust. The server downloaded a year of Sony stock data from Yahoo Finance\cite{sony_stock_data} in CSV format, and parsed it into a list of objects. Next, the original size of the CSV and a calculated value for how much memory is taken up by the parsed list was logged. Finally, the server waited for connections, and depending on the request received, serialized the list of objects into the requested format and sent it to the client. The serialized data was not cached, and the serialization was performed for each request.
 
-The client performs the time measurement, as well as initiates connections to the server. For each data format, the client sends 100 requests to the server, recording the time it takes from initiating the connection to receiving all the data. The average of the time for these 100 requests is then recorded, along with how large each response received was in bytes.
+The client performed the time measurement, as well as initiated connections to the server. For each data format, the client sent 100 requests to the server, and recorded the time it took from initiating the connection to receiving all the data. The average of the time for these 100 requests was then recorded, along with how large each response received was in bytes.
+
+The server was a DigitalOcean Droplet\cite{digital_ocean} running Ubuntu 20.04.5 located in New York City. The client was a laptop running openSUSE Tumbleweed located in Hoboken, NJ.
 
 \section{Results}
 
@@ -114,11 +126,29 @@ The client performs the time measurement, as well as initiates connections to th
 			XBF             & 11.322245              & 14686               \\
 			\hline
 		\end{tabular}
-		\label{results}
-	\end{center}
+	\end{center}\label{time_and_bytes}
 \end{table}
 
-See the \ref{results}
+\begin{table}[htbp]
+	\begin{center}
+		\begin{tabular}{|c|c|c|}
+			\hline
+			\textbf{Format} & \textbf{Overhead (bytes)} & \textbf{Percent Overhead} \\
+			\hline
+			CSV             & 1823                      & 11.1084                   \\
+			MessagePack     & 977                       & 6.2769                    \\
+			CBOR            & 10919                     & 42.8079                   \\
+			JSON            & 16592                     & 53.2136                   \\
+			XML             & 29111                     & 66.6171                   \\
+			XBF             & 98                        & 0.6673                    \\
+			\hline
+		\end{tabular}
+	\end{center}\label{overhead}
+\end{table}
+
+Original CSV data size recorded by the server: 17160 bytes.
+
+Native data size recorded by the server: 14558 bytes.
 
 \section{Discussion}
 
