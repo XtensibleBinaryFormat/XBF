@@ -94,32 +94,35 @@ XBF was evaluated against a number of other self-describing data interchange for
 	\item XML\cite{xml_parser}
 \end{IEEEitemize}
 
-The primary goal of the test was to measure how many bytes a particular format required to transmit a given set of data, with the secondary objective being to measure the timed performance of the format. The data\cite{sony_stock_data} was a year of.
+The test consisted of two components, a client and a server, both written in Rust. The server downloads a year of Sony stock data from Yahoo Finance\cite{sony_stock_data} in CSV format, and parses it into a list of objects. The original size of the CSV and a calculated value for how much memory is taken up by the parsed list is logged. It then waits for connections, and depending on the request received, serializes the list of objects into the requested format and sends it to the client. The serialized data is not cached, and the serialization is performed for each request.
+
+The client performs the time measurement, as well as initiates connections to the server. For each data format, the client sends 100 requests to the server, recording the time it takes from initiating the connection to receiving all the data. The average of the time for these 100 requests is then recorded, along with how large each response received was in bytes.
 
 \section{Results}
+
+\begin{table}[htbp]
+	\begin{center}
+		\begin{tabular}{|c|c|c|}
+			\hline
+			\textbf{Format} & \textbf{Avg Time (ms)} & \textbf{Bytes Read} \\
+			\hline
+			CSV             & 18.931802              & 16411               \\
+			MessagePack     & 11.220957              & 15565               \\
+			CBOR            & 16.957873              & 25507               \\
+			JSON            & 21.912745              & 31180               \\
+			XML             & 21.873043              & 43699               \\
+			XBF             & 11.322245              & 14686               \\
+			\hline
+		\end{tabular}
+		\label{results}
+	\end{center}
+\end{table}
+
+See the \ref{results}
 
 \section{Discussion}
 
 \section{Conclusion}
-
-\section{}
-
-% \begin{table}[htbp]
-% 	\caption{Table Type Styles}
-% 	\begin{center}
-% 		\begin{tabular}{|c|c|c|c|}
-% 			\hline
-% 			\textbf{Table} & \multicolumn{3}{|c|}{\textbf{Table Column Head}}                                                         \\
-% 			\cline{2-4}
-% 			\textbf{Head}  & \textbf{\textit{Table column subhead}}           & \textbf{\textit{Subhead}} & \textbf{\textit{Subhead}} \\
-% 			\hline
-% 			copy           & More table copy$^{\mathrm{a}}$                   &                           &                           \\
-% 			\hline
-% 			\multicolumn{4}{l}{$^{\mathrm{a}}$Sample of a Table footnote.}
-% 		\end{tabular}
-% 		\label{tab1}
-% 	\end{center}
-% \end{table}
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
