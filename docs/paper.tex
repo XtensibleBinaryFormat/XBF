@@ -85,6 +85,7 @@ The reference implementation for XBF\cite{xbf_impl} was written in Rust\cite{rus
 	\item A powerful type system with tagged unions built-in\cite{enums} such that dynamic dispatch and virtual method tables weren't required, and structural pattern matching was used instead.
 	\item Rust provides statically checked memory safety through the concept of ownership\cite{ownership}.
 	\item A built-in testing system in the standard library\cite{testing}.
+	\item Errors are represented as values rather than throwing exceptions\cite{results}.
 \end{IEEEitemize}
 
 \subsection{Values}
@@ -129,7 +130,7 @@ Metadata for integers was an enumeration of the possible metadata discriminant v
 
 \subsection{XbfVec}\label{vec}
 
-XbfVec was implemented as native dynamic array of XbfType values, and a reference counted pointer to the metadata of its inner type. In order to ensure XbfVec remains homogenous, it requires the metadata to be passed in at construction time.
+XbfVec was implemented as native dynamic array of XbfType values, and a reference counted pointer to the metadata of its inner type. In order to ensure XbfVec remains homogenous, it requires the metadata to be passed in at construction time. If all of the values given to the constructor do not have the same metadata as the metadata passed in, the constructor returns an
 
 \subsection{XbfStruct}\label{struct}
 
