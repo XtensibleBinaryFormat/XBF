@@ -39,11 +39,11 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \maketitle
 
 \begin{abstract}
-	Do later
+	The most common data interchange formats used on the web are self-describing, and include metadata with every entry sent. Additionally, they are also encoded in plain text. Both of these traits are inefficient, and data transfer size and speed can be massively improved with a new format. This paper seeks to define and implement a specification for a new data interchange format that remains self-describing, but heavily deduplicates metadata and transfers data in binary. This allows it to be as fast, or faster, than other data interchange formats, even those that utilize binary encodings, while requiring overall less bytes sent on the wire.
 \end{abstract}
 
 \begin{IEEEkeywords}
-	Data format, XML, JSON, Binary data
+	JSON, XML, Binary Encoding, Data Interchange
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -61,29 +61,13 @@ A self-describing format contains metadata and does not require a schema for inc
 </person>
 \end{lstlisting}
 
-This example represents a person object with two fields, a string name and integer age. The downside to being self-describing is wasted characters on the metadata describing the object. In this particular example, 14 characters of the 59 total characters actually contain the desired data, the rest are just describing the metadata. The best thing a format can do is minimize this overhead as much as possible, it cannot be eliminated while still being self-describing.
+This example represents a person object with two fields, a string name and integer age. The downside to being self-describing is wasted characters on the metadata describing the object. In this particular example, 14 characters of the 59 total characters actually contain the desired data, the rest are just describing the metadata.
 
 An additional optimization that could be made (but isn't with either of these formats) is deduplication of the metadata. Both JSON and XML include the metadata for every element sent, even if what is being sent is a homogenous list of elements that all share the same structure.
 
 \subsection{Human Readability}
 
-A human-readable format is one where data is encoded entirely as ASCII or UTF-8 characters, and formatted in such a way that a person could easily read or write it without the need of a machine. Human-readability brings with it two inefficiencies, the need to parse text data into a binary format that a computer understands, and additional overhead from the inherent amount of space it takes to encode data in ASCII. For example, a 32-bit number is stored in 4 bytes natively, but a variable amount of space when in ASCII. If the number being stored is 1, then ASCII only takes a single byte (only a single digit). Once more than 4 digits is required (numbers over 9999), ASCII will always be less efficient than a natively encoded number. In a worst case scenario, 32-bit numbers can store a number up to around 4.2 billion, which would take 10 bytes to store in plain text.
-
-\iffalse
-	\begin{table}[htbp]
-		\caption{Plain Text vs Binary}\label{binary_vs_text}
-		\begin{center}
-			\begin{tabular}{|c|c|c|}
-				\hline
-				\textbf{Value} & \textbf{Plain Text Bytes} & \textbf{Binary Bytes} \\
-				1              & 1                         & 4                     \\
-				9999           & 4                         & 4                     \\
-				10000          & 5                         & 4                     \\
-				\hline
-			\end{tabular}
-		\end{center}
-	\end{table}
-\fi
+A human-readable format is one where data is encoded entirely as ASCII or UTF-8 characters, and formatted in such a way that a person could easily read or write it without the need of a machine. Human-readability brings with it two inefficiencies, the need to parse text data into a binary format that a computer understands, and additional overhead from the inherent amount of space it takes to encode data in text. For example, a 32-bit number is stored in 4 bytes natively, but a variable amount of space when in ASCII. If the number being stored is 1, then ASCII only takes a single byte (only a single digit). Once more than 4 digits is required (numbers over 9999), ASCII will always be less efficient than a natively encoded number. In a worst case scenario, 32-bit numbers can store a number up to around 4.2 billion, which would take 10 bytes to store in plain text.
 
 \subsection{Enhancements Made}
 
@@ -206,21 +190,36 @@ A Struct is an aggregate type containing a name as well as named fields. A struc
 
 A discriminant value should first be sent, similarly to primitives (following the same size requirement). This discriminant value should be 1 greater than that of the discriminant value for Vectors.
 
-Following this, the name of the Struct should be sent, using the same format as primitive strings are sent (unsigned 64-bit length and then the bytes). Next, send the number of fields contained within the Struct as a U64, the same as all other lengths. Finally, the fields of the Struct should be sent, first the name of the field as a String, then immediately after the metadata for the type of the field. This process may continue recursively with nested types of Structs or Vectors. These name and type pairs will be sent until there are no more fields left in the Struct.
+Following this, the name of the Struct should be sent, using the same format as primitive strings are sent (unsigned 64-bit length and then the bytes). Next, send the number of fields contained within the Struct as an unsigned 16-bit integer. A 16-bit integer is used because it's very unlikely for a struct of more than 65 thousand fields to be necessary. Finally, the fields of the Struct should be sent, first the name of the field as a String, then immediately after the metadata for the type of the field. This process may continue recursively with nested types of Structs or Vectors. These name and type pairs will be sent until there are no more fields left in the Struct.
 
 \subsection{Struct Example}
 
+The following pseudocode will be used as an example for the description of a struct:
+
 \begin{lstlisting}[language=C]
-struct MyStruct {
-	x: i8,
-	y: i8
+struct Point {
+	first: i8,
+	last: i8
 }
 
-let my_struct = MyStruct {
-	x: 42,
-	y: -5,
+let my_point = Point {
+	first: 42,
+	last: -5,
 };
 \end{lstlisting}
+
+The struct has a name "Point", and two fields, named "first" and "last", both of type i8. The struct's metadata should be sent as follows:
+
+\begin{center}
+	\begin{bytefield}{32}
+		\bitbox{2}{\rot{DS}} & \bitbox{16}{struct name length} & \bitboxes{2}{Point} & \bitbox{4}{fields} \\
+		\bitboxes{2}{{18} {5} {0} {0} {0} {0} {0} {0} {0} {80} {\rot{111}} {\rot{105}} {\rot{110}} {\rot{116}} {2} {0}} \\
+		\bitbox{16}{first name length} & \bitboxes{2}{first} & \bitbox{2}{\rot{DX}} \\
+		\bitboxes{2}{{5} {0} {0} {0} {0} {0} {0} {0} {\rot{102}} {\rot{105}} {\rot{114}} {\rot{115}} {\rot{116}} {7}} \\
+		\bitbox{16}{last name length} & \bitboxes{2}{last} & \bitbox{2}{\rot{DY}} \\
+		\bitboxes{2}{{4} {0} {0} {0} {0} {0} {0} {0} {\rot{108}} {\rot{97}} {\rot{115}} {\rot{116}} {7}}
+	\end{bytefield}
+\end{center}
 
 \section{Implementation}
 
@@ -408,17 +407,25 @@ Original CSV data size recorded by the server: 17,160 bytes.
 
 Native data size recorded by the server: 14,558 bytes.
 
-\section{Discussion}
+\section{Conclusions}
 
-The first result to address is the difference between the number of bytes in the original CSV file and the number of bytes received by the client when asking for CSV data. Upon examination, it was found that the original CSV always contained 8 total digits of precision, whereas when it was serialized only the number of digits required to represent a number was sent. As an example, in the original data the number 83.5 would be represented as 83.500000, but when serialized would omit the trailing zeroes, as they were unnecessary.
+\subsection{CSV Size Discrepancy}
 
-XBF performed significantly faster than all except one of the other formats tested, despite minimal effort spent optimizing the reference implementation's runtime performance. This can likely be attributed working entirely with binary data, which avoids needing to do complex and expensive conversions between plain text and native binary formats, as well as requires sending less data in general. TODO: more here
+The first result to address is the difference between the number of bytes in the original CSV file and the number of bytes received by the client when asking for CSV data. Upon examination, it was found that the original CSV always contained 8 total digits of precision, whereas when it was serialized only the number of digits required to represent a number was sent. As an example, in the original data the number 83.5 would be represented as 83.500000, but when serialized would omit the trailing zeroes, as they were unnecessary. This difference only serves to increase the performance of CSV in the test, so was left as is.
 
-Additionally, XBF has the smallest overhead of the formats tested, indicating that it would make a good choice for IOT (internet of things) systems which need to transfer data in a low bandwidth scenario. Based on the overall TODO: more here
+\subsection{Time Performance}
 
-\section{Conclusion}
+XBF performed significantly faster than all other formats except for MessagePack, in which both formats performed in about the same amount of time. This is likely due to both formats working with binary data, which avoids needing to do complex and expensive conversions between plain text and native binary formats, as well as requires sending less data in general.
 
-The results obtained indicate that there is still significant room for improvement in the formats used for data interchange. The primary technique of metadata deduplication shows the overhead of sending self-describing data can be reduced greatly. This technique could also be applied to a human-readable format such as JSON or XML, and would provide similar benefits even if the data is transferred as text instead of binary.
+The XBF reference implementation prioritized correctness, memory usage, and performance, in that order. Most optimization time was put into reducing the number of heap allocations made as they are relatively expensive. Given more time the program could be profiled to discover where the most execution time is spent, and optimizations made based on that to improve runtime performance even further.
+
+\subsection{Size Performance}
+
+Of all the formats tested, XBF was able to send the least amount of bytes to express the same amount of data. This is despite some of the optimizations XBF is missing compared to the next most efficient format, MessagePack. MessagePack allows for the conversion of numbers to as small of a size as possible before being sent over the wire. For example, if an unsigned 64-bit number with a value of 1024 was to be sent, it would be downgraded to an unsigned 16-bit number as no information is lost from doing so. MessagePack also has different string and array types with different integer length types, allowing fewer bytes to be sent when these variable length types don't have many elements. As an example, an array with less than 65,536 elements would be sent as an array 16, instead of an array 32. Both of these optimizations weren't implemented in the XBF specification or reference implementation for the sake of simplicity, but could be added in a future revision.
+
+XBF requiring the least amount of bytes, as well as having the smallest overhead, indicates that the primary technique of metadata deduplication worked as intended. This could be implemented in other formats as well, including the human-readable formats such as JSON and XML.
+
+In its current state, XBF would likely make a good candidate for use in low bandwidth scenarios, such as IoT (Internet of Things) systems. It could also have applications in extremely high volume situations, where even a difference of a few kilobytes in the amount of data sent could add up to gigabytes saved very quickly.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}

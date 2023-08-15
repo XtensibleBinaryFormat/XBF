@@ -119,8 +119,7 @@ that of the discriminant value for Vectors.
 
 Following this, the name of the Struct should be sent, using the same format as
 primitive strings are sent (unsigned 64-bit length and then the bytes). Next, send the
-number of fields contained within the Struct as a U64, the same as all other
-lengths. Finally, the fields of the Struct should be sent, first the name of the
+number of fields contained within the Struct as a U16. Finally, the fields of the Struct should be sent, first the name of the
 field as a String, then immediately after the metadata for the type of the
 field. This process may continue recursively with nested types of Structs or
 Vectors. These name and type pairs will be sent until there are no more fields
