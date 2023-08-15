@@ -5,13 +5,19 @@
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
-\usepackage{xurl}
 \usepackage{xcolor}
 \usepackage{listings}
-\usepackage{microtype}
+\usepackage{microtype} 	% fixes word distribution in citations
+\usepackage{xurl} 			% allows citation urls to wrap around lines
+\usepackage{bytefield} 	% for shoing the memory layout of types 
+\usepackage{xpatch} 		% fixes bytefield looking wonky with IEEE formatting
 
+\xpretocmd{\bytefield}{\setlength{\lineskip}{1pt}}{}{}
+
+% weird IEEE stuff included in the template, not questioning it
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
 T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
 \begin{document}
 
 \title{Implementing XBF: An Efficient Self-Describing Binary Format}
@@ -42,11 +48,11 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 \section{Introduction}
 
-On the web, data is largely interchanged in one of two formats, XML (Extensible Markup Language)\cite{xml_spec} or JSON (JavaScript Object Notation)\cite{json_spec}. These formats have two key features that have led to their popularity, human-readability and being self-describing. These features have inherent inefficiencies, which XBF (Xtensible Binary Format)\cite{xbf_spec} intends to solve through carefully chosen compromises.
+On the web, data is largely interchanged in one of two formats, XML (Extensible Markup Language)\cite{xml_spec} or JSON (JavaScript Object Notation)\cite{json_spec}. These formats have two key features that have led to their popularity, human-readability and being self-describing. These features have inherent inefficiencies, which XBF (Xtensible Binary Format) intends to solve through carefully chosen compromises.
 
 \subsection{Self-Description}
 
-A self-describing format is a format in which a recipient is not required to have a schema for the incoming data, and the names and types of the data being sent can be determined from the data itself. The following is an example of XML:
+A self-describing format contains metadata and does not require a schema for incoming data, and the names and types of the data being sent can be determined from the data itself. The following is an example of XML:
 
 \begin{lstlisting}[language=XML]
 <person>
@@ -61,7 +67,23 @@ An additional optimization that could be made (but isn't with either of these fo
 
 \subsection{Human Readability}
 
-A human-readable format is one where data is encoded entirely as ASCII or UTF-8 characters, and formatted in such a way that a person could easily read or write it without the need of a machine. Human-readability brings with it two inefficiencies, the need to parse text data into a binary format that a computer understands, and additional overhead from whitespace characters.
+A human-readable format is one where data is encoded entirely as ASCII or UTF-8 characters, and formatted in such a way that a person could easily read or write it without the need of a machine. Human-readability brings with it two inefficiencies, the need to parse text data into a binary format that a computer understands, and additional overhead from the inherent amount of space it takes to encode data in ASCII. For example, a 32-bit number is stored in 4 bytes natively, but a variable amount of space when in ASCII. If the number being stored is 1, then ASCII only takes a single byte (only a single digit). Once more than 4 digits is required (numbers over 9999), ASCII will always be less efficient than a natively encoded number. In a worst case scenario, 32-bit numbers can store a number up to around 4.2 billion, which would take 10 bytes to store in plain text.
+
+\iffalse
+	\begin{table}[htbp]
+		\caption{Plain Text vs Binary}\label{binary_vs_text}
+		\begin{center}
+			\begin{tabular}{|c|c|c|}
+				\hline
+				\textbf{Value} & \textbf{Plain Text Bytes} & \textbf{Binary Bytes} \\
+				1              & 1                         & 4                     \\
+				9999           & 4                         & 4                     \\
+				10000          & 5                         & 4                     \\
+				\hline
+			\end{tabular}
+		\end{center}
+	\end{table}
+\fi
 
 \subsection{Enhancements Made}
 
@@ -75,11 +97,135 @@ With the inefficiencies of these two formats in mind, XBF seeks to improve on th
 
 \section{Format Design}
 
-Similar to CSV (cite here?), we send a single header up front, followed by all the data. For a primitive type there isn't a large savings here, but there are massive savings with vectors and structs. With a vector the metadata is a discriminant indicating a vector is being sent, which is then followed by the metadata for its internal type. This process continues recursively if the inner type (or any of its inner types) contains a vector or struct, ensuring that all metadata necessary to represent the data coming afterward is received up front. The data is then sent in a single continuous block, something after this...
+\subsection{Primitive Types}
+
+There are a total of 17  primitive types:
+
+\begin{IEEEitemize}
+	\item Boolean
+	\item U8, U16, U32, U64, U128, U256
+	\item I8, I16, I32, I64, I128, I256
+	\item F32, F64
+	\item Bytes
+	\item String (UTF-8)
+\end{IEEEitemize}
+
+All integers should be sent in little endian format, with the least significant bit first. For signed integers, they should be represented in two's complement format. These two formats are chosen because they are the most common way integers are interacted with in modern x86 and ARM processors, and should minimize the amount of conversion required when sending and receiving data. Similarly, floating point numbers should be sent as 32 or 64 bit IEEE 754 floating point numbers.
+
+Strings should be sent as a sequence of bytes that correspond to UTF-8 code points. They should first send their length as an unsigned 64-bit integer (in little endian format), followed by the corresponding number of bytes contained within the string. Bytes have the same specification as strings, but with the exception that they do not have to be a valid sequence of UTF-8 code points. Lengths were chosen to be 64-bits to simplify the format, but at the cost of efficiency when sending many small sequences.
+
+\subsection{Primitive Metadata}
+
+Primitive metadata should be sent as a single byte discriminant value. After receiving one of these discriminant values, the client should read the following byte(s) and interpret them as the type given by the discriminant.
+
+\begin{table}[htbp]
+	\caption{Primitive Metadata Discriminants}\label{discriminants}
+	\begin{center}
+		\begin{tabular}{|c|c|}
+			\hline
+			\textbf{Type} & \textbf{Discriminant} \\
+			\hline
+			Boolean       & 0                     \\
+			U8            & 1                     \\
+			U16           & 2                     \\
+			U32           & 3                     \\
+			U64           & 4                     \\
+			U128          & 5                     \\
+			U256          & 6                     \\
+			I8            & 7                     \\
+			I16           & 8                     \\
+			I32           & 9                     \\
+			I64           & 10                    \\
+			I128          & 11                    \\
+			I256          & 12                    \\
+			F32           & 13                    \\
+			F64           & 14                    \\
+			Bytes         & 15                    \\
+			String        & 16                    \\
+			\hline
+		\end{tabular}
+	\end{center}
+\end{table}
+
+Strings should always be the final value in the list. The value given to strings
+is used by Vectors and Structs to determine what their discriminant value should
+be.
+
+\subsection{Primitive Examples}
+
+In the following examples, each type will first be shown with its discriminant value followed by its actual value, with the byte representation underneath them.
+
+\subsubsection{16-Bit Unsigned Integer}
+
+\begin{center}
+	\begin{bytefield}{24}
+		\bitbox{8}{Disc} & \bitbox{16}{1024} \\
+		\bitbox{8}{2} & \bitboxes{8}{04} \\
+	\end{bytefield}
+\end{center}
+
+\subsubsection{String}
+
+\newcommand{\rot}[1]{\rotatebox{90}{#1}}
+
+\begin{center}
+	\begin{bytefield}[bitheight=\widthof{"Disc"}]{28}
+		\bitbox{2}{\rot{Disc}} & \bitbox{16}{length} & \bitboxes{2}{hello} \\
+		\bitboxes{2}{{16} {2} {0} {0} {0} {0} {0} {0} {0} {\rot{104}} {\rot{101}} {\rot{108}} {\rot{108}} {\rot{111}}}
+	\end{bytefield}
+\end{center}
+
+\subsection{Vector Type}
+
+Vectors are a homogenous list of values that has a known, variable length. Vectors should first include their length as an unsigned 64-bit integer (the same as Strings and Bytes), followed by the corresponding number of elements. The type contained within a Vector is not sent to the client. That information is carried in the metadata.
+
+\subsection{Vector Metadata}
+
+Similarly to primitives, a single byte discriminant value signifying a Vector is incoming is sent. This discriminant value should be 1 greater than that of the discriminant value for Strings. Following this, metadata information for the internal type contained within the Vector will be sent. This process may continue recursively with nested types of Vectors and Structs. The length of a vector or the data contained within the vector must not be sent.
+
+\subsection{Vector Example}
+
+\textit{Vector of 16-Bit Unsigned Integers}
+
+DV = Discriminant of a Vector
+
+D16 = Discriminant of a 16-Bit Unsigned Integer
+
+\begin{center}
+	\begin{bytefield}{26}
+		\bitbox{2}{\rot{DV}} & \bitbox{2}{\rot{D16}} & \bitbox{16}{length} & \bitboxes{4}{{42} {1024}} \\
+		\bitboxes{2}{{17} {2} {2} {0} {0} {0} {0} {0} {0} {0} {42} {0} {0} {4}}
+	\end{bytefield}
+\end{center}
+
+\subsection{Struct Type}
+
+A Struct is an aggregate type containing a name as well as named fields. A struct may not contain duplicate field names. Should a Struct be sent like this anyway, it should be considered malformed and not be constructed on the receiving end. Fields of a Struct are sent in sequence in the order they are listed in the Struct's metadata. When a struct is serialized it should not send any sort of name information (such as its name or field names), how many fields it has, nor should it send any type information about its fields. That information is carried in the metadata.
+
+\subsection{Struct Metadata}
+
+A discriminant value should first be sent, similarly to primitives (following the same size requirement). This discriminant value should be 1 greater than that of the discriminant value for Vectors.
+
+Following this, the name of the Struct should be sent, using the same format as primitive strings are sent (unsigned 64-bit length and then the bytes). Next, send the number of fields contained within the Struct as a U64, the same as all other lengths. Finally, the fields of the Struct should be sent, first the name of the field as a String, then immediately after the metadata for the type of the field. This process may continue recursively with nested types of Structs or Vectors. These name and type pairs will be sent until there are no more fields left in the Struct.
+
+\subsection{Struct Example}
+
+\begin{lstlisting}[language=C]
+struct MyStruct {
+	x: i8,
+	y: i8
+}
+
+let my_struct = MyStruct {
+	x: 42,
+	y: -5,
+};
+\end{lstlisting}
 
 \section{Implementation}
 
 The reference implementation for XBF\cite{xbf_impl} is written in Rust\cite{rust}. Rust was chosen for the following reasons:
+
 \begin{IEEEitemize}
 	\item Rust is statically typed and compiled, and allows for similarly efficient code generation to C/C++.
 	\item A powerful type system with tagged unions built-in\cite{enums} such that dynamic dispatch and virtual method tables weren't required, and structural pattern matching was used instead.
@@ -92,6 +238,30 @@ The reference implementation for XBF\cite{xbf_impl} is written in Rust\cite{rust
 
 At the top of the hierarchy of types is a generic value, named the XbfType. This is a tagged union of all possible types, consisting of Primitives (XbfPrimitive) \ref{primitives}, Vectors (XbfVec)
 \ref{vec}, and Structs (XbfStruct) \ref{struct}. The corresponding metadata is the XbfMetadata, a tagged union of metadata types of each of the aforementioned subtypes. In order to perform a downcast on either of these top level types, Rust's structural pattern matching must be used.
+
+\begin{table}[htbp]
+	\begin{center}
+		\begin{tabular}{|c|c|c|}
+			\hline
+			\multicolumn{3}{|c|}{XbfType}     \\
+			\hline
+			XbfPrimitive & XbfVec & XbfStruct \\
+			\hline
+		\end{tabular}
+	\end{center}
+\end{table}
+
+\begin{table}[htbp]
+	\begin{center}
+		\begin{tabular}{|c|c|c|}
+			\hline
+			\multicolumn{3}{|c|}{XbfMetadata}                         \\
+			\hline
+			XbfPrimitiveMetadata & XbfVecMetadata & XbfStructMetadata \\
+			\hline
+		\end{tabular}
+	\end{center}
+\end{table}
 
 \subsection{XbfPrimitive}\label{primitives}
 
@@ -132,6 +302,14 @@ Metadata for integers is an enumeration of the possible primitive metadata discr
 
 XbfVec is implemented as a native dynamic array of XbfType values, and a Rc (reference counted, shared pointer) to the metadata of its inner type, represented as the base XbfMetadata. In order to ensure XbfVec remains homogenous, it requires the metadata to be passed in at construction time. If all the values given to the constructor do not have the same metadata as the metadata passed in, the constructor returns an error type.
 
+\begin{center}
+	\begin{bytefield}{32}
+		\wordbox{1}{XbfVec} \\
+		\bitbox{8}{Metadata} & \bitbox{24}{Vec\textless XbfType\textgreater} \\
+		\bitbox{8}{Rc} & \bitbox{8}{*XbfType} & \bitbox{8}{Length} & \bitbox{8}{Capacity}
+	\end{bytefield}
+\end{center}
+
 The metadata is implemented with a Rc because Rust's tagged unions are not allowed to be recursive, as then they could be infinitely sized on the stack. A pointer type has a known sized value, and as such the tagged union can then be created on the stack by the compiler. The recursion comes from the base XbfMetadata type, which can contain XbfVecMetadata, which contains an XbfMetadata, and the recursion can continue.
 
 XbfVecMetadata could have been implemented with an owning pointer (known as a Box\textless T\textgreater), however that would mean that the metadata couldn't be shared among many instances of an object. When XbfVec is deserialized, it passes the internal metadata to each of the inner values it deserializes and constructs, which causes the reference count to increase and all the inner values to share the same heap allocated metadata. While this does not affect the on the wire performance, this does reduce memory usage for a user of the library.
@@ -140,11 +318,31 @@ XbfVecMetadata could have been implemented with an owning pointer (known as a Bo
 
 XbfStruct is implemented in a very similar manner to XbfVec, consisting of a Rc to the metadata of the struct, and a Box\textless [XbfType]\textgreater\space containing the fields. This type is known as a boxed slice. In Rust, a slice is a pair of a pointer to contiguous memory and a length. When a slice is boxed, it is allocated on the heap, and the box object is the sole owner of that heap allocation, and will de-allocate it when the box goes out of scope. The reason a boxed slice was chosen instead of a dynamic array was to save on memory usage.
 
+\begin{center}
+	\begin{bytefield}{32}
+		\wordbox{1}{XbfStruct} \\
+		\bitbox{8}{Metadata} & \bitbox{24}{Box\textless [XbfType]\textgreater} \\
+		\bitbox{8}{Rc} & \bitbox{12}{*XbfType} & \bitbox{12}{Length}
+	\end{bytefield}
+\end{center}
+
 A Vec\textless T\textgreater (dynamic array) in Rust consists of a pointer to memory, a capacity of how much memory is available at that address, and a length of how many elements have been properly initialized. The amount of fields of a struct are not allowed to change, so a boxed slice can be used instead of a dynamic array, thereby saving the size of a pointer of memory for every XbfStruct created.
 
 The metadata of structs (XbfStructMetadata) is the most complex of the three metadata types. It consists of boxed string slice and an IndexMap\cite{indexmap} mapping string slices to XbfMetadata types.
 
-In Rust there is an important distinction between an owned String, and a string slice\cite{strings}. A string slice is similar to the previously mentioned slices, except it consists of valid UTF-8 code points. It is a view into a block of memory, and its size cannot be modified. If growable string is required, that's where the String type is used. It makes the same UTF-8 guarantee as a string slice, but has the same properties as a Vec where it keeps track of its capacity, will reallocate if its capacity is exceeded, similar to a dynamic array. As with the decision to use a slice in XbfStruct, a string slice is utilized to save on memory usage, as the metadata for a struct shouldn't need to change, thereby making a capacity field irrelevant.
+In Rust there is an important distinction between an owned String, and a string slice\cite{strings}. A string slice is similar to the previously mentioned slices, except it consists of valid UTF-8 code points. It is a view into a block of memory, and its size cannot be modified. If growable string is required, that's where the String type is used. It makes the same UTF-8 guarantee as a string slice, but has the same properties as a Vec where it keeps track of its capacity, and will reallocate if its capacity is exceeded, similar to a dynamic array. As with the decision to use a slice in XbfStruct, a string slice is utilized to save on memory usage, as the metadata for a struct shouldn't need to change, thereby making a capacity field irrelevant.
+
+\begin{center}
+	\begin{bytefield}{24}
+		\wordbox{1}{String} \\
+		\bitbox{8}{*u8} & \bitbox{8}{Length} & \bitbox{8}{Capacity} \\
+	\end{bytefield}
+
+	\begin{bytefield}{16}
+		\wordbox{1}{\&str (string slice)} \\
+		\bitbox{8}{*u8} & \bitbox{8}{Length}
+	\end{bytefield}
+\end{center}
 
 An IndexMap is a hash table with consistent order and fast iteration. Ordinarily a hash table does not keep track of the order it's fields are inserted, which is a problem when serializing the metadata, as the fields could be sent in any order. A dynamic array of objects consisting of the field name and type could be used, however this leads to $O(n)$ searches for a given field. In order to retain $O(1)$ searches, an IndexMap was used. It requires extra memory overhead to keep track of the insertion order of keys and values, but ensures that iteration is fast and in a consistent order.
 
@@ -212,13 +410,15 @@ Native data size recorded by the server: 14,558 bytes.
 
 \section{Discussion}
 
-XBF performed significantly faster than all except one of the other formats tested, despite minimal effort spent optimizing the reference implementation's runtime performance. Additionally, XBF has the smallest overhead of the formats tested, indicating that it would make a good choice for IOT (internet of things) systems which need to transfer data in a low bandwidth scenario. Based on the overall
+The first result to address is the difference between the number of bytes in the original CSV file and the number of bytes received by the client when asking for CSV data. Upon examination, it was found that the original CSV always contained 8 total digits of precision, whereas when it was serialized only the number of digits required to represent a number was sent. As an example, in the original data the number 83.5 would be represented as 83.500000, but when serialized would omit the trailing zeroes, as they were unnecessary.
+
+XBF performed significantly faster than all except one of the other formats tested, despite minimal effort spent optimizing the reference implementation's runtime performance. This can likely be attributed working entirely with binary data, which avoids needing to do complex and expensive conversions between plain text and native binary formats, as well as requires sending less data in general. TODO: more here
+
+Additionally, XBF has the smallest overhead of the formats tested, indicating that it would make a good choice for IOT (internet of things) systems which need to transfer data in a low bandwidth scenario. Based on the overall TODO: more here
 
 \section{Conclusion}
 
 The results obtained indicate that there is still significant room for improvement in the formats used for data interchange. The primary technique of metadata deduplication shows the overhead of sending self-describing data can be reduced greatly. This technique could also be applied to a human-readable format such as JSON or XML, and would provide similar benefits even if the data is transferred as text instead of binary.
-
-In the self-describing binary format space, there are still many improvements that could be made in the future to XBF. Sizes for variable length
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
