@@ -208,7 +208,7 @@ let my_point = Point {
 };
 \end{lstlisting}
 
-The struct has a name "Point", and two fields, named "first" and "last", both of type i8. The struct's metadata should be sent as follows:
+The struct has a name Point, and two fields, named first and last, both of type i8. The goal is to serialize the variable \texttt{my\_point}, which is an instance of Point with the values 42 and -5 for the members first and last respectively. The struct's metadata should be sent as follows:
 
 \begin{center}
 	\begin{bytefield}{32}
@@ -218,6 +218,15 @@ The struct has a name "Point", and two fields, named "first" and "last", both of
 		\bitboxes{2}{{5} {0} {0} {0} {0} {0} {0} {0} {\rot{102}} {\rot{105}} {\rot{114}} {\rot{115}} {\rot{116}} {7}} \\
 		\bitbox{16}{last name length} & \bitboxes{2}{last} & \bitbox{2}{\rot{DY}} \\
 		\bitboxes{2}{{4} {0} {0} {0} {0} {0} {0} {0} {\rot{108}} {\rot{97}} {\rot{115}} {\rot{116}} {7}}
+	\end{bytefield}
+\end{center}
+
+The values inside the struct should then be sent in the same order as they are listed in the struct's metadata:
+
+\begin{center}
+	\begin{bytefield}{12}
+		\bitbox{6}{first} & \bitbox{6}{last} \\
+		\bitbox{6}{42} & \bitbox{6}{251} \\
 	\end{bytefield}
 \end{center}
 
@@ -327,9 +336,9 @@ XbfStruct is implemented in a very similar manner to XbfVec, consisting of a Rc 
 
 A Vec\textless T\textgreater (dynamic array) in Rust consists of a pointer to memory, a capacity of how much memory is available at that address, and a length of how many elements have been properly initialized. The amount of fields of a struct are not allowed to change, so a boxed slice can be used instead of a dynamic array, thereby saving the size of a pointer of memory for every XbfStruct created.
 
-The metadata of structs (XbfStructMetadata) is the most complex of the three metadata types. It consists of boxed string slice and an IndexMap\cite{indexmap} mapping string slices to XbfMetadata types.
+The metadata of structs (XbfStructMetadata) is the most complex of the three metadata types. It consists of boxed string slice and an IndexMap\cite{indexmap} mapping boxed string slices to XbfMetadata types.
 
-In Rust there is an important distinction between an owned String, and a string slice\cite{strings}. A string slice is similar to the previously mentioned slices, except it consists of valid UTF-8 code points. It is a view into a block of memory, and its size cannot be modified. If growable string is required, that's where the String type is used. It makes the same UTF-8 guarantee as a string slice, but has the same properties as a Vec where it keeps track of its capacity, and will reallocate if its capacity is exceeded, similar to a dynamic array. As with the decision to use a slice in XbfStruct, a string slice is utilized to save on memory usage, as the metadata for a struct shouldn't need to change, thereby making a capacity field irrelevant.
+In Rust there is an important distinction between an owned String, and a string slice\cite{strings}. A string slice is similar to the previously mentioned slices, except it consists of valid UTF-8 code points. It is a view into a block of memory, and its size cannot be modified. If growable string is required, that's where the String type is used. It makes the same UTF-8 guarantee as a string slice, but has the same properties as a Vec where it keeps track of its capacity, and will reallocate if its capacity is exceeded, similar to a dynamic array. As with the decision to use a boxed slice in XbfStruct, a boxed string slice is utilized to save on memory usage, as the metadata for a struct shouldn't need to change, thereby making a capacity field irrelevant.
 
 \begin{center}
 	\begin{bytefield}{24}
@@ -345,7 +354,19 @@ In Rust there is an important distinction between an owned String, and a string 
 
 An IndexMap is a hash table with consistent order and fast iteration. Ordinarily a hash table does not keep track of the order it's fields are inserted, which is a problem when serializing the metadata, as the fields could be sent in any order. A dynamic array of objects consisting of the field name and type could be used, however this leads to $O(n)$ searches for a given field. In order to retain $O(1)$ searches, an IndexMap was used. It requires extra memory overhead to keep track of the insertion order of keys and values, but ensures that iteration is fast and in a consistent order.
 
-\subsection{Testing}\label{testing}
+\begin{center}
+	\begin{bytefield}{36}
+		\wordbox{1}{XbfStructMetadata} \\
+		\bitbox{10}{Box\textless str\textgreater} & \bitbox{26}{IndexMap\textless Box\textless str\textgreater, XbfMetadata\textgreater} \\
+		\bitbox{5}{*u8} & \bitbox{5}{Length} & \bitbox{26}{Fields omitted for brevity}
+	\end{bytefield}
+\end{center}
+
+\subsection{Implementation Testing}\label{testing}
+
+The reference implementation was developed in a test driven manner, taking advantage of the built-in testing facilities of Rust. Individual unit tests would first be written with the desired behavior for an object or function, and then code would be written to satisfy the test. This approach leads to more reliable software. When adding a new feature, if anything from old features is broken tests will fail, indicating something has gone wrong. Unit tests also caught a number of implementation bugs which were noticed immediately because of the immediate feedback.
+
+In addition to the unit tests, a number of integration tests, tests designed to test the public API (Application Programming Interface), were implemented to ensure the experience of using the library was as expected. The combination of these approaches has led to 100 percent code coverage, such that every line of source code of the library has been executed at least once by a test.
 
 \section{Evaluation}
 
