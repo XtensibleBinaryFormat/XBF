@@ -48,7 +48,7 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 \section{Introduction}
 
-On the web, data is largely interchanged in one of two formats, XML (Extensible Markup Language)\cite{xml_spec} or JSON (JavaScript Object Notation)\cite{json_spec}. These formats have two key features that have led to their popularity, human-readability and being self-describing. These features have inherent inefficiencies, which XBF (Xtensible Binary Format) intends to solve through carefully chosen compromises.
+On the web, data is largely interchanged in one of two formats, Extensible Markup Language (XML)\cite{xml_spec} or  JavaScript Object Notation (JSON)\cite{json_spec}. These formats have two key features that have led to their popularity: self-description and human-readability. These features have inherent inefficiencies, which XBF (Xtensible Binary Format) intends to solve through carefully chosen compromises.
 
 \subsection{Self-Description}
 
@@ -63,20 +63,40 @@ A self-describing format contains metadata and does not require a schema for inc
 
 This example represents a person object with two fields, a string name and integer age. The downside to being self-describing is wasted characters on the metadata describing the object. In this particular example, 14 characters of the 59 total characters actually contain the desired data, the rest are just describing the metadata.
 
-An additional optimization that could be made (but isn't with either of these formats) is deduplication of the metadata. Both JSON and XML include the metadata for every element sent, even if what is being sent is a homogenous list of elements that all share the same structure.
+% An additional optimization that could be made (but isn't with either of these formats) is deduplication of the metadata. Both JSON and XML include the metadata for every element sent, even if what is being sent is a homogenous list of elements that all share the same structure.
+%
 
-\subsection{Human Readability}
+\subsection{Human-Readability}
 
 A human-readable format is one where data is encoded entirely as ASCII or UTF-8 characters, and formatted in such a way that a person could easily read or write it without the need of a machine. Human-readability brings with it two inefficiencies, the need to parse text data into a binary format that a computer understands, and additional overhead from the inherent amount of space it takes to encode data in text. For example, a 32-bit number is stored in 4 bytes natively, but a variable amount of space when in ASCII. If the number being stored is 1, then ASCII only takes a single byte (only a single digit). Once more than 4 digits is required (numbers over 9999), ASCII will always be less efficient than a natively encoded number. In a worst case scenario, 32-bit numbers can store a number up to around 4.2 billion, which would take 10 bytes to store in plain text.
 
-\subsection{Enhancements Made}
+\subsection{Similar Formats}
 
-With the inefficiencies of these two formats in mind, XBF seeks to improve on them through a few core design decisions:
+There are other self-describing formats that improve on JSON and XML in various ways that will now be examined.
+
+\subsubsection{Comma Separated Values (CSV)}
+
+CSV\cite{csv_spec} is a human-readable format ideal for sending mass amounts of data. CSV avoids sending metadata repeatedly by having a header at the top of the file which describes the names of each of the columns in the rows that follow. These rows must always contain the same number of elements as the number of columns defined in the header, which makes CSV less flexible compared to JSON and XML, which can have objects that contain objects or lists of objects.
+
+\subsubsection{Concise Binary Object Format (CBOR)}
+
+CBOR\cite{cbor_spec} is a binary format which seeks to have interoperability with JSON, a fairly small message size, and tiny required code size for an encoder and decoder. Additionally, the format seeks to be future-proof and extensible such that older decoders can still decode new extended data.
+
+\subsubsection{MessagePack}
+
+MessagePack\cite{msgpack_spec} is a binary format inspired by JSON but with its own type system and encoding and decoding format. All data is represented in a binary format, big-endian where necessary, and supports custom extension types that can be defined by applications.
+
+\subsection{Shortcomings}
+
+Each of the formats examined has its own set of shortcomings that can be improved on. CSV has the right idea of sending as little metadata as possible, but has a limited type system as a result. JSON and XML are human-readable, and thus inefficient by design. CBOR prioritizes implementation code size more than a small message size, when it should be possible to achieve both. MessagePack doesn't deduplicate metadata where possible, and sends type information with every value sent. Additionally, MessagePack utilizes big-endian formatting, while most modern processors use little-endian, requiring a conversion to take place.
+
+Given these shortcomings, there are a number of ways they can be improved on:
 
 \begin{IEEEitemize}
-	\item Send data and metadata in a binary format (no longer human-readable).
-	\item Remain self-describing, but have the option to not include metadata if it's already known, and deduplicate metadata whenever possible.
-	\item Prioritize simplicity in the type system.
+	\item When possible, send metadata only a single time (mainly for homogenous lists).
+	\item Allow sending metadata to be optional, such as if a client already has it.
+	\item Utilize little-endian to reduce conversions.
+	\item Prioritize a simple type system.
 \end{IEEEitemize}
 
 \section{Format Design}
@@ -94,13 +114,13 @@ There are a total of 17  primitive types:
 	\item String (UTF-8)
 \end{IEEEitemize}
 
-All integers should be sent in little endian format, with the least significant bit first. For signed integers, they should be represented in two's complement format. These two formats are chosen because they are the most common way integers are interacted with in modern x86 and ARM processors, and should minimize the amount of conversion required when sending and receiving data. Similarly, floating point numbers should be sent as 32 or 64 bit IEEE 754 floating point numbers.
+All integers will be sent in little endian format, with the least significant bit first. For signed integers, they will be represented in two's complement format. These two formats are chosen because they are the most common way integers are interacted with in modern x86 and ARM processors, and will minimize the amount of conversion required when sending and receiving data. Similarly, floating point numbers will be sent as 32 or 64 bit IEEE 754 floating point numbers.
 
-Strings should be sent as a sequence of bytes that correspond to UTF-8 code points. They should first send their length as an unsigned 64-bit integer (in little endian format), followed by the corresponding number of bytes contained within the string. Bytes have the same specification as strings, but with the exception that they do not have to be a valid sequence of UTF-8 code points. Lengths were chosen to be 64-bits to simplify the format, but at the cost of efficiency when sending many small sequences.
+Strings will be sent as a sequence of bytes that correspond to UTF-8 code points. They will first send their length as an unsigned 64-bit integer (in little endian format), followed by the corresponding number of bytes contained within the string. Bytes have the same specification as strings, but with the exception that they do not have to be a valid sequence of UTF-8 code points. Lengths were chosen to be 64-bits to simplify the format, but at the cost of efficiency when sending many small sequences.
 
 \subsection{Primitive Metadata}
 
-Primitive metadata should be sent as a single byte discriminant value. After receiving one of these discriminant values, the client should read the following byte(s) and interpret them as the type given by the discriminant.
+Primitive metadata will be sent as a single byte discriminant value. After receiving one of these discriminant values, the client will read the following byte(s) and interpret them as the type given by the discriminant. The discriminant for each primitive type is show in Table \ref{discriminants}
 
 \begin{table}[htbp]
 	\caption{Primitive Metadata Discriminants}\label{discriminants}
@@ -209,6 +229,12 @@ let my_point = Point {
 \end{lstlisting}
 
 The struct has a name Point, and two fields, named first and last, both of type i8. The goal is to serialize the variable \texttt{my\_point}, which is an instance of Point with the values 42 and -5 for the members first and last respectively. The struct's metadata should be sent as follows:
+
+DS = Discriminant of a Struct
+
+DX = Discriminant of field "first"
+
+DY = Discriminant of field "last"
 
 \begin{center}
 	\begin{bytefield}{32}
@@ -373,9 +399,9 @@ In addition to the unit tests, a number of integration tests, tests designed to 
 XBF was evaluated against a number of other self-describing data interchange formats.
 
 \begin{IEEEitemize}
-	\item CSV (Comma Separated Values)\cite{csv_spec}\cite{csv_parser}
-	\item MessagePack\cite{msgpack_spec}\cite{msgpack_parser}
-	\item CBOR (Concise Binary Object Representation)\cite{cbor_spec}\cite{cbor_parser}
+	\item CSV\cite{csv_parser}
+	\item MessagePack\cite{msgpack_parser}
+	\item CBOR\cite{cbor_parser}
 	\item JSON\cite{json_parser}
 	\item XML\cite{xml_parser}
 \end{IEEEitemize}

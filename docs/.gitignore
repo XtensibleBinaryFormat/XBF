@@ -1,2 +1,4 @@
 paper.*
 !paper.tex
+presentation.*
+!presentation.tex
