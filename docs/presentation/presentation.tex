@@ -1,6 +1,13 @@
 \documentclass{beamer}
 \usepackage{amsfonts,amsmath,oldgerm}
 \usepackage{bytefield}
+\usepackage{listings}
+
+\lstdefinestyle{rust}{
+	tabsize=2
+}
+\lstset{style=rust}
+
 \usetheme{sintef}
 \usefonttheme[onlymath]{serif}
 \titlebackground*{assets/background}
@@ -13,26 +20,10 @@
 \author{\href{mailto:dkrautha@pm.me}{David Krauthamer}}
 % \IDnumber{1234567}
 
-\setbeameroption{show notes}
+% \setbeameroption{show notes}
 
 \begin{document}
 \maketitle
-
-% \begin{frame}
-%
-% 	This template is based on \hrefcol{https://www.overleaf.com/latex/templates/sapienza-presentation/yyksmrskffhk}{Sapienza Presentation} from \hrefcol{mailto:andrea@gasparini.cloud}{Andrea Gasparini}
-%
-% 	\vspace{\baselineskip}
-%
-% 	The above template is a based on \hrefcol{https://www.overleaf.com/latex/templates/sintef-presentation/jhbhdffczpnx}{SINTEF Presentation} from \hrefcol{mailto:federico.zenith@sintef.no}{Federico Zenith} and its derivation \hrefcol{https://github.com/TOB-KNPOB/Beamer-LaTeX-Themes}{Beamer-LaTeX-Themes} from Liu Qilong
-%
-% 	\vspace{\baselineskip}
-%
-% 	In the following you find a brief introduction on how to use \LaTeX\ and the beamer package to prepare slides, based on the one written by \hrefcol{mailto:federico.zenith@sintef.no}{Federico Zenith} for \hrefcol{https://www.overleaf.com/latex/templates/sintef-presentation/jhbhdffczpnx}{SINTEF Presentation}
-%
-% 	% This template is released under \hrefcol{https://creativecommons.org/licenses/by-nc/4.0/legalcode}{Creative Commons CC BY 4.0} license
-%
-% \end{frame}
 
 \section{Introduction}
 
@@ -61,7 +52,7 @@
 	\end{itemize}
 \end{frame}
 
-\begin{frame}{Improvements}
+\begin{frame}{Improvements For a New Format}
 	\begin{itemize}
 		\item When possible, send metadata only a single time (mainly for homogenous lists).
 		\item Allow sending metadata to be optional, such as if a client already has it.
@@ -94,6 +85,7 @@
 		      \note[item]{Floating Point Types}
 		      \begin{itemize}
 			      \item IEEE 754 floating point numbers
+			      \item Equivalent to float and double in C
 		      \end{itemize}
 		\item Bytes  (Non-UTF-8 Bytes)
 		      \note[item]{String but doesn't have to be UTF-8}
@@ -148,7 +140,7 @@
 		      \note[item]{Length is an u64, the same as String and Bytes}
 		\item Length is sent, followed by the elements.
 		      \note[item]{No type info about elements, that's in metadata}
-		\item Inner type Information is \emph{not} sent.
+		\item Inner type Information is \emph{not} sent as a part of the value.
 	\end{itemize}
 \end{frame}
 
@@ -156,7 +148,7 @@
 	\begin{itemize}
 		\item Single byte discriminant value is sent (String + 1).
 		\item Followed by internal type metadata (can continue recursively).
-		\item Length is \emph{not} sent.
+		\item Length is \emph{not} sent as a part of the metadata.
 	\end{itemize}
 \end{frame}
 
@@ -177,17 +169,132 @@
 
 \begin{frame}{Structs (Aggregate Types)}
 	\begin{itemize}
-		\item item
+		\item	An aggregate type containing a name as well as named fields.
+		\item May not contain duplicate field names.
+		\item Fields are sent in sequence in the order they are listed in metadata.
+		\item Serialized value does \emph{not} include:
+		      \begin{itemize}
+			      \item Struct name.
+			      \item Number of fields.
+			      \item Field names.
+			      \item Field types.
+		      \end{itemize}
 	\end{itemize}
 \end{frame}
 
 \begin{frame}{Struct Metadata}
 	\begin{itemize}
-		\item item
+		\item Single byte discriminant value is sent (Vector + 1).
+		\item Followed by Struct name.
+		\item Next, number of fields as an unsigned 16-bit integer.
+		      \note[item]{A 16-bit integer is used because it's very unlikely for a struct of more than 65 thousand fields to be necessary.}
+		\item Last, pairs of field names and types.
+		      \begin{itemize}
+			      \item May continue recursively with nested types of Structs or Vectors.
+		      \end{itemize}
+		\item All names are sent with the same format as primitive Strings.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Struct Metadata Example}
+	\begin{columns}
+		\begin{column}{0.65\textwidth}
+			\note[item]{ DS = Discriminant of a Struct
+
+				DX = Discriminant of field "first"
+
+				DY = Discriminant of field "last"}
+			\center
+			\begin{bytefield}{32}
+				\bitbox{2}{\rot{DS}} & \bitbox{16}{struct name length} & \bitboxes{2}{Point} & \bitbox{4}{fields} \\
+				\bitboxes{2}{{18} {5} {0} {0} {0} {0} {0} {0} {0} {80} {\rot{111}} {\rot{105}} {\rot{110}} {\rot{116}} {2} {0}} \\
+			\end{bytefield}
+			\begin{bytefield}{32}
+				\bitbox{16}{first name length} & \bitboxes{2}{first} & \bitbox{2}{\rot{DX}} \\
+				\bitboxes{2}{{5} {0} {0} {0} {0} {0} {0} {0} {\rot{102}} {\rot{105}} {\rot{114}} {\rot{115}} {\rot{116}} {7}} \\
+			\end{bytefield}
+			\begin{bytefield}{32}
+				\bitbox{16}{last name length} & \bitboxes{2}{last} & \bitbox{2}{\rot{DY}} \\
+				\bitboxes{2}{{4} {0} {0} {0} {0} {0} {0} {0} {\rot{108}} {\rot{97}} {\rot{115}} {\rot{116}} {7}}
+			\end{bytefield}
+		\end{column}
+		\begin{column}{0.35\textwidth}
+			\begin{lstlisting}
+struct Point {
+	first: i8,
+	last: i8
+}
+\end{lstlisting}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Struct Value Example}
+	\begin{columns}
+		\begin{column}{0.5\textwidth}
+			\center
+			\begin{bytefield}{12}
+				\bitbox{6}{first} & \bitbox{6}{last} \\
+				\bitbox{6}{42} & \bitbox{6}{251} \\
+			\end{bytefield}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			\center
+			\begin{lstlisting}
+let my_point = Point {
+	first: 42,
+	last: -5,
+};
+			\end{lstlisting}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\section{Evaluation}
+
+\begin{frame}{Tested Formats}
+	\begin{itemize}
+		\item CSV
+		\item MessagePack
+		\item CBOR
+		\item JSON
+		\item XML
 	\end{itemize}
 \end{frame}
 
 \section{Results}
+
+\begin{frame}{Average Time and Bytes Read}
+	\center
+	\begin{tabular}{|c|c|c|}
+		\hline
+		\textbf{Format} & \textbf{Avg Time (ms)} & \textbf{Bytes Read} \\
+		\hline
+		CSV             & 18.93                  & 16,411              \\
+		MessagePack     & 11.22                  & 15,565              \\
+		CBOR            & 16.95                  & 25,507              \\
+		JSON            & 21.91                  & 31,180              \\
+		XML             & 21.87                  & 43,699              \\
+		XBF             & 11.32                  & 14,686              \\
+		\hline
+	\end{tabular}
+\end{frame}
+
+\begin{frame}{Overhead}
+	\center
+	\begin{tabular}{|c|c|c|}
+		\hline
+		\textbf{Format} & \textbf{Overhead (bytes)} & \textbf{Percent Overhead} \\
+		\hline
+		CSV             & 1,823                     & 11.1                      \\
+		MessagePack     & 977                       & 6.22                      \\
+		CBOR            & 10,919                    & 42.8                      \\
+		JSON            & 16,592                    & 53.2                      \\
+		XML             & 29,111                    & 66.6                      \\
+		XBF             & 98                        & 0.67                      \\
+		\hline
+	\end{tabular}
+\end{frame}
 
 \backmatter[notitle]
 \end{document}

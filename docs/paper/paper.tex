@@ -63,9 +63,6 @@ A self-describing format contains metadata and does not require a schema for inc
 
 This example represents a person object with two fields, a string name and integer age. The downside to being self-describing is wasted characters on the metadata describing the object. In this particular example, 14 characters of the 59 total characters actually contain the desired data, the rest are just describing the metadata.
 
-% An additional optimization that could be made (but isn't with either of these formats) is deduplication of the metadata. Both JSON and XML include the metadata for every element sent, even if what is being sent is a homogenous list of elements that all share the same structure.
-%
-
 \subsection{Human-Readability}
 
 A human-readable format is one where data is encoded entirely as ASCII or UTF-8 characters, and formatted in such a way that a person could easily read or write it without the need of a machine. Human-readability brings with it two inefficiencies, the need to parse text data into a binary format that a computer understands, and additional overhead from the inherent amount of space it takes to encode data in text. For example, a 32-bit number is stored in 4 bytes natively, but a variable amount of space when in ASCII. If the number being stored is 1, then ASCII only takes a single byte (only a single digit). Once more than 4 digits is required (numbers over 9999), ASCII will always be less efficient than a natively encoded number. In a worst case scenario, 32-bit numbers can store a number up to around 4.2 billion, which would take 10 bytes to store in plain text.
