@@ -1,8 +1,8 @@
 build:
-  latexmk -pdf -pv
+  latexmk -pdf -pv ./presentation.tex
 
 build_continuous:
-  latexmk -pdf -pvc
+  latexmk -pdf -pvc ./presentation.tex
 
 clean:
   latexmk -c
