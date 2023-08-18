@@ -54,10 +54,78 @@
 	% XML from paper here
 \end{frame}
 
-% possibly add three slides explaining each of these
-% 1: XML being huge
-% 2: plain text example from paper
-% 3: 1027 as u32 0 4 3 0 -> 0 3 4 0 
+\begin{frame}[fragile]{Repeated Metadata}
+	\begin{columns}
+		\begin{column}{0.5\textwidth}
+			\note[item]{XML example where a huge percent of the actual data sent is metadata}
+			\begin{lstlisting}[language=XML]
+<person>
+	<name>John Jackson</name>
+	<age>25</age>
+</person>
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			\begin{table}
+				\caption{XML Space Utilization}
+				\center
+				\begin{tabular}{|c|c|c|}
+					\hline
+					\textbf{} & \textbf{Bytes Used} & \textbf{Percent} \\
+					\hline
+					Metadata  & 45                  & 76\%             \\
+					Data      & 14                  & 24\%             \\
+					\hline
+					Total     & 59                  & 100              \\
+					\hline
+				\end{tabular}
+			\end{table}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Plain Text Example}
+	\begin{table}
+		\caption{Sending A 32-bit Unsigned Integer}
+		\begin{center}
+			\begin{tabular}{|c|c|c|}
+				\hline
+				\textbf{Number} & \textbf{ASCII Bytes} & \textbf{Binary Bytes} \\
+				\hline
+				1               & 1                    & 4                     \\
+				9999            & 4                    & 4                     \\
+				7654321         & 7                    & 4                     \\
+				\hline
+			\end{tabular}
+		\end{center}
+	\end{table}
+\end{frame}
+
+\begin{frame}[fragile]{Big Endian Example: 32-bit Unsigned Integer}
+	\begin{center}
+		\textbf{Number To Send: 1027} \\
+	\end{center}
+	\begin{columns}
+		\begin{column}{0.3\textwidth}
+			\begin{bytefield}{16}
+				\wordbox{1}{Sender (Little Endian)} \\
+				\bitboxes{4}{{3} {4} {0} {0}} \\
+			\end{bytefield}
+		\end{column}
+		\begin{column}{0.3\textwidth}
+			\begin{bytefield}{16}
+				\wordbox{1}{On the Wire (Big Endian)} \\
+				\bitboxes{4}{{0} {0} {4} {3}} \\
+			\end{bytefield}
+		\end{column}
+		\begin{column}{0.3\textwidth}
+			\begin{bytefield}{16}
+				\wordbox{1}{Recipient (Little Endian)} \\
+				\bitboxes{4}{{3} {4} {0} {0}} \\
+			\end{bytefield}
+		\end{column}
+	\end{columns}
+\end{frame}
 
 \begin{frame}{Improvements For a New Format}
 	\begin{itemize}
