@@ -148,8 +148,8 @@ Primitive metadata will be sent as a single byte discriminant value. After recei
 	\end{center}
 \end{table}
 
-Strings should always be the final value in the list. The value given to strings
-is used by Vectors and Structs to determine what their discriminant value should
+Strings will always be the final value in the list. The value given to strings
+is used by Vectors and Structs to determine what their discriminant value will
 be.
 
 \subsection{Primitive Examples}
@@ -178,11 +178,11 @@ In the following examples, each type will first be shown with its discriminant v
 
 \subsection{Vector Type}
 
-Vectors are a homogenous list of values that has a known, variable length. Vectors should first include their length as an unsigned 64-bit integer (the same as Strings and Bytes), followed by the corresponding number of elements. The type contained within a Vector is not sent to the client. That information is carried in the metadata.
+Vectors are a homogenous list of values that has a known, variable length. Vectors will first include their length as an unsigned 64-bit integer (the same as Strings and Bytes), followed by the corresponding number of elements. The type contained within a Vector is not sent to the client. That information is carried in the metadata.
 
 \subsection{Vector Metadata}
 
-Similarly to primitives, a single byte discriminant value signifying a Vector is incoming is sent. This discriminant value should be 1 greater than that of the discriminant value for Strings. Following this, metadata information for the internal type contained within the Vector will be sent. This process may continue recursively with nested types of Vectors and Structs. The length of a vector or the data contained within the vector must not be sent.
+Similarly to primitives, a single byte discriminant value signifying a Vector is incoming is sent. This discriminant value will be 1 greater than that of the discriminant value for Strings. Following this, metadata information for the internal type contained within the Vector will be sent. This process may continue recursively with nested types of Vectors and Structs. The length of a vector or the data contained within the vector must not be sent.
 
 \subsection{Vector Example}
 
@@ -201,13 +201,13 @@ D16 = Discriminant of a 16-Bit Unsigned Integer
 
 \subsection{Struct Type}
 
-A Struct is an aggregate type containing a name as well as named fields. A struct may not contain duplicate field names. Should a Struct be sent like this anyway, it should be considered malformed and not be constructed on the receiving end. Fields of a Struct are sent in sequence in the order they are listed in the Struct's metadata. When a struct is serialized it should not send any sort of name information (such as its name or field names), how many fields it has, nor should it send any type information about its fields. That information is carried in the metadata.
+A Struct is an aggregate type containing a name as well as named fields. A struct may not contain duplicate field names. Should a Struct be sent like this anyway, it is considered malformed and may not be constructed on the receiving end. Fields of a Struct are sent in sequence in the order they are listed in the Struct's metadata. When a struct is serialized it does not send any sort of name information (such as its name or field names), how many fields it has, nor does it send any type information about its fields. That information is carried in the metadata.
 
 \subsection{Struct Metadata}
 
-A discriminant value should first be sent, similarly to primitives (following the same size requirement). This discriminant value should be 1 greater than that of the discriminant value for Vectors.
+A discriminant value will first be sent, similarly to primitives (following the same size requirement). This discriminant value is 1 greater than that of the discriminant value for Vectors.
 
-Following this, the name of the Struct should be sent, using the same format as primitive strings are sent (unsigned 64-bit length and then the bytes). Next, send the number of fields contained within the Struct as an unsigned 16-bit integer. A 16-bit integer is used because it's very unlikely for a struct of more than 65 thousand fields to be necessary. Finally, the fields of the Struct should be sent, first the name of the field as a String, then immediately after the metadata for the type of the field. This process may continue recursively with nested types of Structs or Vectors. These name and type pairs will be sent until there are no more fields left in the Struct.
+Following this, the name of the Struct will be sent, using the same format as primitive strings are sent (unsigned 64-bit length and then the bytes). Next, send the number of fields contained within the Struct as an unsigned 16-bit integer. A 16-bit integer is used because it's very unlikely for a struct of more than 65 thousand fields to be necessary. Finally, the fields of the Struct will be sent, first the name of the field as a String, then immediately after the metadata for the type of the field. This process may continue recursively with nested types of Structs or Vectors. These name and type pairs will be sent until there are no more fields left in the Struct.
 
 \subsection{Struct Example}
 
@@ -225,7 +225,7 @@ let my_point = Point {
 };
 \end{lstlisting}
 
-The struct has a name Point, and two fields, named first and last, both of type i8. The goal is to serialize the variable \texttt{my\_point}, which is an instance of Point with the values 42 and -5 for the members first and last respectively. The struct's metadata should be sent as follows:
+The struct has a name Point, and two fields, named first and last, both of type i8. The goal is to serialize the variable \texttt{my\_point}, which is an instance of Point with the values 42 and -5 for the members first and last respectively. The struct's metadata will be sent as follows:
 
 DS = Discriminant of a Struct
 
@@ -244,7 +244,7 @@ DY = Discriminant of field "last"
 	\end{bytefield}
 \end{center}
 
-The values inside the struct should then be sent in the same order as they are listed in the struct's metadata:
+The values inside the struct will be sent in the same order as they are listed in the struct's metadata:
 
 \begin{center}
 	\begin{bytefield}{12}
@@ -303,7 +303,7 @@ The implementation of primitives is a tagged union of all possible primitive typ
 	\begin{center}
 		\begin{tabular}{|c|c|c|}
 			\hline
-			\textbf{XBF Type} & \textbf{Rust Type}          & \textbf{C++ Type}                         \\
+			\textbf{XBF Type} & \textbf{Rust Type}          & \textbf{C++ Equivalent Type}              \\
 			\hline
 			Boolean           & bool                        & bool                                      \\
 			U8                & u8                          & uint8\_t                                  \\
@@ -361,7 +361,7 @@ A Vec\textless T\textgreater (dynamic array) in Rust consists of a pointer to me
 
 The metadata of structs (XbfStructMetadata) is the most complex of the three metadata types. It consists of boxed string slice and an IndexMap\cite{indexmap} mapping boxed string slices to XbfMetadata types.
 
-In Rust there is an important distinction between an owned String, and a string slice\cite{strings}. A string slice is similar to the previously mentioned slices, except it consists of valid UTF-8 code points. It is a view into a block of memory, and its size cannot be modified. If growable string is required, that's where the String type is used. It makes the same UTF-8 guarantee as a string slice, but has the same properties as a Vec where it keeps track of its capacity, and will reallocate if its capacity is exceeded, similar to a dynamic array. As with the decision to use a boxed slice in XbfStruct, a boxed string slice is utilized to save on memory usage, as the metadata for a struct shouldn't need to change, thereby making a capacity field irrelevant.
+In Rust there is an important distinction between an owned String, and a string slice\cite{strings}. A string slice is similar to the previously mentioned slices, except it consists of valid UTF-8 code points. It is a view into a block of memory, and its size cannot be modified. If growable string is required, that's where the String type is used. It makes the same UTF-8 guarantee as a string slice, but has the same properties as a Vec where it keeps track of its capacity, and will reallocate if its capacity is exceeded, similar to a dynamic array. As with the decision to use a boxed slice in XbfStruct, a boxed string slice is utilized to save on memory usage, as the metadata for a struct won't need to change, thereby making a capacity field irrelevant.
 
 \begin{center}
 	\begin{bytefield}{24}
@@ -450,6 +450,8 @@ The server was a DigitalOcean Droplet\cite{digital_ocean} running Ubuntu 20.04.5
 Original CSV data size recorded by the server: 17,160 bytes.
 
 Native data size recorded by the server: 14,558 bytes.
+
+See Table \ref{time_and_bytes} and \ref{overhead} for additional results. Overhead is calculated as native data size recorded by the server subtracted from bytes sent for a format.
 
 \section{Conclusions}
 

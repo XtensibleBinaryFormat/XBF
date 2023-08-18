@@ -20,7 +20,7 @@
 \author{\href{mailto:dkrautha@pm.me}{David Krauthamer}}
 % \IDnumber{1234567}
 
-% \setbeameroption{show notes}
+\setbeameroption{show notes}
 
 \begin{document}
 \maketitle
@@ -49,15 +49,22 @@
 		      \note[item]{Requires more bytes to store the same data}
 		\item Use of big-endian.
 		      \note[item]{Most modern processors (x86 and ARM) are little-endian}
+		      \note[item]{Both CBOR and MessagePack are big-endian}
 	\end{itemize}
+	% XML from paper here
 \end{frame}
+
+% possibly add three slides explaining each of these
+% 1: XML being huge
+% 2: plain text example from paper
+% 3: 1027 as u32 0 4 3 0 -> 0 3 4 0 
 
 \begin{frame}{Improvements For a New Format}
 	\begin{itemize}
 		\item When possible, send metadata only a single time (mainly for homogenous lists).
 		\item Allow sending metadata to be optional, such as if a client already has it.
 		      \note[item]{Keep metadata and data separate, not coupled together}
-		\item Utilize little-endian to reduce conversions.
+		\item Utilize little-endian to eliminate endian conversions on common architectures.
 		\item Prioritize a simple type system.
 		      \note[item]{Hopefully makes the implementation simpler}
 	\end{itemize}
@@ -70,7 +77,7 @@
 		\item Boolean
 		      \note[item]{True of False, one byte}
 		      \note[item]{All integers are little-endian}
-		      \note[item]{Integer types are equivalent to the types in stdint.h C header}
+		      \note[item]{Integer types are equivalent to the types in stdint.h C headers}
 		\item U8, U16, U32, U64, U128, U256
 		      \note[item]{Unsigned Integer Types}
 		      \begin{itemize}
@@ -112,6 +119,7 @@
 		String        & 16                    \\
 		\hline
 	\end{tabular}
+	% two columsn for each half of the list
 	\note[item]{Metadata is sent as a single byte discriminant value}
 	\note[item]{The discriminant begin at 0 with Boolean, and increase by 1 for each type}
 	\note[item]{Progress in the same order as the previous slide, with String being the final value}
@@ -227,6 +235,7 @@ struct Point {
 \end{lstlisting}
 		\end{column}
 	\end{columns}
+	% add explanation for DS, DX, DY
 \end{frame}
 
 \begin{frame}[fragile]{Struct Value Example}
