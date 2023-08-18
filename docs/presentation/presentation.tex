@@ -15,10 +15,7 @@
 \newcommand{\rot}[1]{\rotatebox{90}{#1}}
 
 \title{Implementing XBF: An Efficient Self-Describing Binary Format}
-% \subtitle{Using \LaTeX\ to prepare slides}
-% \course{Master's Degree in Computer Science}
 \author{\href{mailto:dkrautha@pm.me}{David Krauthamer}}
-% \IDnumber{1234567}
 
 \setbeameroption{show notes}
 
@@ -170,27 +167,45 @@
 \end{frame}
 
 \begin{frame}{Primitive Metadata}
-	\center
-	\begin{tabular}{|c|c|}
-		\hline
-		\textbf{Type} & \textbf{Discriminant} \\
-		\hline
-		Boolean       & 0                     \\
-		U8            & 1                     \\
-		U16           & 2                     \\
-		U32           & 3                     \\
-		...           & ...                   \\
-		I256          & 12                    \\
-		F32           & 13                    \\
-		F64           & 14                    \\
-		Bytes         & 15                    \\
-		String        & 16                    \\
-		\hline
-	\end{tabular}
-	% two columsn for each half of the list
+	\begin{columns}
+		\begin{column}{0.5\textwidth}
+			\center
+			\begin{tabular}{|c|c|}
+				\hline
+				\textbf{Type} & \textbf{Discriminant} \\
+				\hline
+				Boolean       & 0                     \\
+				U8            & 1                     \\
+				U16           & 2                     \\
+				U32           & 3                     \\
+				U64           & 4                     \\
+				U128          & 5                     \\
+				U256          & 6                     \\
+				\hline
+			\end{tabular}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			\center
+			\begin{tabular}{|c|c|}
+				\hline
+				\textbf{Type} & \textbf{Discriminant} \\
+				\hline
+				I8            & 7                     \\
+				I16           & 8                     \\
+				I32           & 9                     \\
+				I64           & 10                    \\
+				I128          & 11                    \\
+				I256          & 12                    \\
+				F32           & 13                    \\
+				F64           & 14                    \\
+				Bytes         & 15                    \\
+				String        & 16                    \\
+				\hline
+			\end{tabular}
+		\end{column}
+	\end{columns}
 	\note[item]{Metadata is sent as a single byte discriminant value}
 	\note[item]{The discriminant begin at 0 with Boolean, and increase by 1 for each type}
-	\note[item]{Progress in the same order as the previous slide, with String being the final value}
 \end{frame}
 
 \begin{frame}[fragile]{Primitive Example}
@@ -275,22 +290,17 @@
 \begin{frame}[fragile]{Struct Metadata Example}
 	\begin{columns}
 		\begin{column}{0.65\textwidth}
-			\note[item]{ DS = Discriminant of a Struct
-
-				DX = Discriminant of field "first"
-
-				DY = Discriminant of field "last"}
 			\center
 			\begin{bytefield}{32}
 				\bitbox{2}{\rot{DS}} & \bitbox{16}{struct name length} & \bitboxes{2}{Point} & \bitbox{4}{fields} \\
 				\bitboxes{2}{{18} {5} {0} {0} {0} {0} {0} {0} {0} {80} {\rot{111}} {\rot{105}} {\rot{110}} {\rot{116}} {2} {0}} \\
 			\end{bytefield}
 			\begin{bytefield}{32}
-				\bitbox{16}{first name length} & \bitboxes{2}{first} & \bitbox{2}{\rot{DX}} \\
+				\bitbox{16}{first name length} & \bitboxes{2}{first} & \bitbox{2}{\rot{DF}} \\
 				\bitboxes{2}{{5} {0} {0} {0} {0} {0} {0} {0} {\rot{102}} {\rot{105}} {\rot{114}} {\rot{115}} {\rot{116}} {7}} \\
 			\end{bytefield}
 			\begin{bytefield}{32}
-				\bitbox{16}{last name length} & \bitboxes{2}{last} & \bitbox{2}{\rot{DY}} \\
+				\bitbox{16}{last name length} & \bitboxes{2}{last} & \bitbox{2}{\rot{DL}} \\
 				\bitboxes{2}{{4} {0} {0} {0} {0} {0} {0} {0} {\rot{108}} {\rot{97}} {\rot{115}} {\rot{116}} {7}}
 			\end{bytefield}
 		\end{column}
@@ -301,9 +311,14 @@ struct Point {
 	last: i8
 }
 \end{lstlisting}
+			\hfill \break
+			DS = Struct Discriminant
+
+			DF = Field "first" discriminant
+
+			DL = Field "last" discriminant
 		\end{column}
 	\end{columns}
-	% add explanation for DS, DX, DY
 \end{frame}
 
 \begin{frame}[fragile]{Struct Value Example}
