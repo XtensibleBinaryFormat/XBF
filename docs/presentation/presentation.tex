@@ -3,6 +3,19 @@
 \usepackage{bytefield}
 \usepackage{listings}
 
+% pympress notes page config
+\iffalse
+	\setbeamertemplate{note page}
+	{
+		\insertslideintonotes{0.01}
+		\rule{\textwidth}{0.1pt}
+		%\color{blue} \scriptsize
+		\insertnote
+	}
+	\setbeameroption{show notes on second screen}
+\fi
+
+% adjust gigantic tabs in code blocks, not actually rust format
 \lstdefinestyle{rust}{
 	tabsize=2
 }
@@ -12,12 +25,11 @@
 \usefonttheme[onlymath]{serif}
 \titlebackground*{assets/background}
 
+% needed this a bunch so made a macro for myself
 \newcommand{\rot}[1]{\rotatebox{90}{#1}}
 
 \title{Implementing XBF: An Efficient Self-Describing Binary Format}
 \author{\href{mailto:dkrautha@pm.me}{David Krauthamer}}
-
-\setbeameroption{show notes}
 
 \begin{document}
 \maketitle
@@ -137,75 +149,72 @@
 
 \section{Format Design}
 
-\begin{frame}{Primitives}
-	\begin{itemize}
-		\item Boolean
-		      \note[item]{True of False, one byte}
-		      \note[item]{All integers are little-endian}
-		      \note[item]{Integer types are equivalent to the types in stdint.h C headers}
-		\item U8, U16, U32, U64, U128, U256
-		      \note[item]{Unsigned Integer Types}
-		      \begin{itemize}
-			      \item Equivalent to uint*\_t types in C
-		      \end{itemize}
-		\item I8, I16, I32, I64, I128, I256
-		      \note[item]{Signed Integer Types}
-		      \begin{itemize}
-			      \item Equivalent to int*\_t types in C
-		      \end{itemize}
-		\item F32, F64
-		      \note[item]{Floating Point Types}
-		      \begin{itemize}
-			      \item IEEE 754 floating point numbers
-			      \item Equivalent to float and double in C
-		      \end{itemize}
-		\item Bytes  (Non-UTF-8 Bytes)
-		      \note[item]{String but doesn't have to be UTF-8}
-		\item String (UTF-8 Bytes)
-		      \note[item]{Sends length as u64 followed by UTF-8 bytes}
-	\end{itemize}
-\end{frame}
-
-\begin{frame}{Primitive Metadata}
+\begin{frame}{Primitives and Primitive Metadata}
 	\begin{columns}
 		\begin{column}{0.5\textwidth}
+			\begin{itemize}
+				\item Boolean
+				      \note[item]{True of False, one byte}
+				      \note[item]{All integers are little-endian}
+				      \note[item]{Integer types are equivalent to the types in stdint.h C headers}
+				\item U8, U16, U32, U64, U128, U256
+				      \note[item]{Unsigned Integer Types}
+				      \begin{itemize}
+					      \item Equivalent to uint*\_t types in C
+				      \end{itemize}
+				\item I8, I16, I32, I64, I128, I256
+				      \note[item]{Signed Integer Types}
+				      \begin{itemize}
+					      \item Equivalent to int*\_t types in C
+				      \end{itemize}
+				\item F32, F64
+				      \note[item]{Floating Point Types}
+				      \begin{itemize}
+					      \item IEEE 754 floating point numbers
+					      \item Equivalent to float and double in C
+				      \end{itemize}
+				\item Bytes  (Non-UTF-8 Bytes)
+				      \note[item]{String but doesn't have to be UTF-8}
+				\item String (UTF-8 Bytes)
+				      \note[item]{Sends length as u64 followed by UTF-8 bytes}
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.25\textwidth}
 			\center
 			\begin{tabular}{|c|c|}
 				\hline
-				\textbf{Type} & \textbf{Discriminant} \\
+				\textbf{Type} & \textbf{Value} \\
 				\hline
-				Boolean       & 0                     \\
-				U8            & 1                     \\
-				U16           & 2                     \\
-				U32           & 3                     \\
-				U64           & 4                     \\
-				U128          & 5                     \\
-				U256          & 6                     \\
+				Boolean       & 0              \\
+				U8            & 1              \\
+				U16           & 2              \\
+				U32           & 3              \\
+				U64           & 4              \\
+				U128          & 5              \\
+				U256          & 6              \\
 				\hline
 			\end{tabular}
 		\end{column}
-		\begin{column}{0.5\textwidth}
+		\begin{column}{0.25\textwidth}
 			\center
 			\begin{tabular}{|c|c|}
 				\hline
-				\textbf{Type} & \textbf{Discriminant} \\
+				\textbf{Type} & \textbf{Value} \\
 				\hline
-				I8            & 7                     \\
-				I16           & 8                     \\
-				I32           & 9                     \\
-				I64           & 10                    \\
-				I128          & 11                    \\
-				I256          & 12                    \\
-				F32           & 13                    \\
-				F64           & 14                    \\
-				Bytes         & 15                    \\
-				String        & 16                    \\
+				I8            & 7              \\
+				I16           & 8              \\
+				I32           & 9              \\
+				I64           & 10             \\
+				I128          & 11             \\
+				I256          & 12             \\
+				F32           & 13             \\
+				F64           & 14             \\
+				Bytes         & 15             \\
+				String        & 16             \\
 				\hline
 			\end{tabular}
 		\end{column}
 	\end{columns}
-	\note[item]{Metadata is sent as a single byte discriminant value}
-	\note[item]{The discriminant begin at 0 with Boolean, and increase by 1 for each type}
 \end{frame}
 
 \begin{frame}[fragile]{Primitive Example}
@@ -225,17 +234,14 @@
 \end{frame}
 
 \begin{frame}{Vectors (Homogenous Lists)}
+	Values
 	\begin{itemize}
-		\item Homogenous list of values that has a known, variable length.
+		\item Homogenous list of values that has a known length.
 		\item Length is sent as a part of the type, not in metadata.
-		      \note[item]{Length is an u64, the same as String and Bytes}
-		\item Length is sent, followed by the elements.
-		      \note[item]{No type info about elements, that's in metadata}
 		\item Inner type Information is \emph{not} sent as a part of the value.
 	\end{itemize}
-\end{frame}
 
-\begin{frame}{Vector Metadata}
+	Metadata
 	\begin{itemize}
 		\item Single byte discriminant value is sent (String + 1).
 		\item Followed by internal type metadata (can continue recursively).
@@ -245,11 +251,11 @@
 
 \begin{frame}[fragile]{Vector Example}
 	\begin{center}
-		\textbf{Vector of 16-Bit Unsigned Integers:} [42, 1024]
+		Vector of 16-Bit Unsigned Integers: [42, 1024] \vfill \break
 
 		DV = Discriminant of a Vector
 
-		D16 = Discriminant of a 16-Bit Unsigned Integer
+		D16 = Discriminant of a 16-Bit Unsigned Integer \vfill \break
 
 		\begin{bytefield}{26}
 			\bitbox{2}{\rot{DV}} & \bitbox{2}{\rot{D16}} & \bitbox{16}{length} & \bitboxes{4}{{42} {1024}} \\
@@ -344,30 +350,51 @@ let my_point = Point {
 
 \section{Evaluation}
 
-\begin{frame}{Tested Formats}
+\begin{frame}{Encoder and Decoder Reference Implementation}
 	\begin{itemize}
-		\item CSV
-		\item MessagePack
-		\item CBOR
-		\item JSON
-		\item XML
+		\item Written in Rust.
+		      \note[item]{systems level programming language similar to C and C++, strong memory safety guarantees}
+		\item Extensively Tested.
+		      \note[item]{100 percent code coverage}
+		      \note[item]{not going to talk a ton about the reference implementation}
+		\item Majority of time was spent on this implementation.
 	\end{itemize}
+\end{frame}
+
+\begin{frame}{Performance Test}
+	\begin{columns}
+		\begin{column}{0.5\textwidth}
+			Server
+			\begin{itemize}
+				\item Downloads and parses 1 year of Sony stock history.
+				\item 
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+				\item For each data format the client:
+				      \begin{itemize}
+					      \item Client sends 100 requests to the server.
+					      \item Records average time to receive a response.
+					      \item Records number of bytes read.
+				      \end{itemize}
+		\end{column}
+	\end{columns}
 \end{frame}
 
 \section{Results}
 
 \begin{frame}{Average Time and Bytes Read}
 	\center
-	\begin{tabular}{|c|c|c|}
+	\begin{tabular}{|c|c|c|c|c|}
 		\hline
-		\textbf{Format} & \textbf{Avg Time (ms)} & \textbf{Bytes Read} \\
-		\hline
-		CSV             & 18.93                  & 16,411              \\
-		MessagePack     & 11.22                  & 15,565              \\
-		CBOR            & 16.95                  & 25,507              \\
-		JSON            & 21.91                  & 31,180              \\
-		XML             & 21.87                  & 43,699              \\
-		XBF             & 11.32                  & 14,686              \\
+		\textbf{Format} & \textbf{Avg Time (ms)} & \textbf{Bytes Read} & \textbf{Overhead (bytes)} & \textbf{Percent Overhead} \\ 
+		\hline                                                                                                                    
+		CSV             & 18.93                  & 16,411              & 1,823                     & 11.1                      \\ 
+		MessagePack     & 11.22                  & 15,565              & 977                       & 6.22                      \\ 
+		CBOR            & 16.95                  & 25,507              & 10,919                    & 42.8                      \\ 
+		JSON            & 21.91                  & 31,180              & 16,592                    & 53.2                      \\ 
+		XML             & 21.87                  & 43,699              & 29,111                    & 66.6                      \\ 
+		XBF             & 11.32                  & 14,686              & 98                        & 0.67                      \\ 
 		\hline
 	\end{tabular}
 \end{frame}
