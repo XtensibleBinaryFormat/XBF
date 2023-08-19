@@ -28,7 +28,7 @@
 % needed this a bunch so made a macro for myself
 \newcommand{\rot}[1]{\rotatebox{90}{#1}}
 
-\title{Implementing XBF: An Efficient Self-Describing Binary Format}
+\title{Xtensible Binary Format (XBF): An Efficient Self-Describing Binary Format}
 \author{\href{mailto:dkrautha@pm.me}{David Krauthamer}}
 
 \begin{document}
@@ -38,35 +38,40 @@
 
 \begin{frame}{Web Data Interchange Formats}
 	\begin{itemize}
-		\item Human-Readable and Self-Describing
-		      \note[item]{Most formats on the web are human-readable and self-describing}
-		      \note[item]{Self describing means they include metadata to describe themselves, and don't require an external schema}
-		      \note[item]{Human readable means plain text, ASCII or utf-8}
 		\item Most common: JSON and XML
-		      \note[item]{The most common of these formats is JSON and XML}
+		\item Human-Readable and Self-Describing
 		\item Alternatives: CSV, MessagePack, CBOR
-		      \note[item]{There are other human-readable formats such as CSV}
-		      \note[item]{And others, such as CBOR (concise binary object representation), and MessagePack that are still self-describing, but use a binary format instead}
 	\end{itemize}
 \end{frame}
 
 \begin{frame}{Shortcomings of Current Formats}
 	\begin{itemize}
-		\item Repeated sending of metadata.
 		\item Inefficiency of plain text.
-		      \note[item]{Expensive conversion between plain text and binary}
-		      \note[item]{Requires more bytes to store the same data}
+		\item Repeated sending of metadata.
 		\item Use of big-endian.
-		      \note[item]{Most modern processors (x86 and ARM) are little-endian}
-		      \note[item]{Both CBOR and MessagePack are big-endian}
 	\end{itemize}
-	% XML from paper here
+\end{frame}
+
+\begin{frame}[fragile]{Plain Text Example}
+	\begin{table}
+		\caption{Sending A 32-bit Unsigned Integer}
+		\begin{center}
+			\begin{tabular}{|c|c|c|}
+				\hline
+				\textbf{Number} & \textbf{ASCII Bytes} & \textbf{Binary Bytes} \\
+				\hline
+				1               & 1                    & 4                     \\
+				9999            & 4                    & 4                     \\
+				7654321         & 7                    & 4                     \\
+				\hline
+			\end{tabular}
+		\end{center}
+	\end{table}
 \end{frame}
 
 \begin{frame}[fragile]{Repeated Metadata}
 	\begin{columns}
 		\begin{column}{0.5\textwidth}
-			\note[item]{XML example where a huge percent of the actual data sent is metadata}
 			\begin{lstlisting}[language=XML]
 <person>
 	<name>John Jackson</name>
@@ -91,23 +96,6 @@
 			\end{table}
 		\end{column}
 	\end{columns}
-\end{frame}
-
-\begin{frame}[fragile]{Plain Text Example}
-	\begin{table}
-		\caption{Sending A 32-bit Unsigned Integer}
-		\begin{center}
-			\begin{tabular}{|c|c|c|}
-				\hline
-				\textbf{Number} & \textbf{ASCII Bytes} & \textbf{Binary Bytes} \\
-				\hline
-				1               & 1                    & 4                     \\
-				9999            & 4                    & 4                     \\
-				7654321         & 7                    & 4                     \\
-				\hline
-			\end{tabular}
-		\end{center}
-	\end{table}
 \end{frame}
 
 \begin{frame}[fragile]{Big Endian Example: 32-bit Unsigned Integer}
@@ -136,14 +124,12 @@
 	\end{columns}
 \end{frame}
 
-\begin{frame}{Improvements For a New Format}
+\begin{frame}{Improvements For A New Format}
 	\begin{itemize}
 		\item When possible, send metadata only a single time (mainly for homogenous lists).
 		\item Allow sending metadata to be optional, such as if a client already has it.
-		      \note[item]{Keep metadata and data separate, not coupled together}
 		\item Utilize little-endian to eliminate endian conversions on common architectures.
 		\item Prioritize a simple type system.
-		      \note[item]{Hopefully makes the implementation simpler}
 	\end{itemize}
 \end{frame}
 
@@ -154,29 +140,21 @@
 		\begin{column}{0.5\textwidth}
 			\begin{itemize}
 				\item Boolean
-				      \note[item]{True of False, one byte}
-				      \note[item]{All integers are little-endian}
-				      \note[item]{Integer types are equivalent to the types in stdint.h C headers}
 				\item U8, U16, U32, U64, U128, U256
-				      \note[item]{Unsigned Integer Types}
 				      \begin{itemize}
 					      \item Equivalent to uint*\_t types in C
 				      \end{itemize}
 				\item I8, I16, I32, I64, I128, I256
-				      \note[item]{Signed Integer Types}
 				      \begin{itemize}
 					      \item Equivalent to int*\_t types in C
 				      \end{itemize}
 				\item F32, F64
-				      \note[item]{Floating Point Types}
 				      \begin{itemize}
 					      \item IEEE 754 floating point numbers
 					      \item Equivalent to float and double in C
 				      \end{itemize}
 				\item Bytes  (Non-UTF-8 Bytes)
-				      \note[item]{String but doesn't have to be UTF-8}
 				\item String (UTF-8 Bytes)
-				      \note[item]{Sends length as u64 followed by UTF-8 bytes}
 			\end{itemize}
 		\end{column}
 		\begin{column}{0.25\textwidth}
@@ -284,7 +262,6 @@
 		\item Single byte discriminant value is sent (Vector + 1).
 		\item Followed by Struct name.
 		\item Next, number of fields as an unsigned 16-bit integer.
-		      \note[item]{A 16-bit integer is used because it's very unlikely for a struct of more than 65 thousand fields to be necessary.}
 		\item Last, pairs of field names and types.
 		      \begin{itemize}
 			      \item May continue recursively with nested types of Structs or Vectors.
@@ -352,67 +329,103 @@ let my_point = Point {
 
 \begin{frame}{Encoder and Decoder Reference Implementation}
 	\begin{itemize}
-		\item Written in Rust.
-		      \note[item]{systems level programming language similar to C and C++, strong memory safety guarantees}
-		\item Extensively Tested.
-		      \note[item]{100 percent code coverage}
-		      \note[item]{not going to talk a ton about the reference implementation}
-		\item Majority of time was spent on this implementation.
+		\item Written in Rust
+		      \begin{itemize}
+			      \item Efficient code generation similar to C and C++
+			      \item Built-in tagged unions
+			      \item Strong memory safety guarantees
+		      \end{itemize}
+		\item Extensively tested
+		      \begin{itemize}
+			      \item Unit and integration tests
+			      \item 100 percent code coverage
+		      \end{itemize}
 	\end{itemize}
 \end{frame}
 
 \begin{frame}{Performance Test}
 	\begin{columns}
 		\begin{column}{0.5\textwidth}
-			Server
+			Multi-threaded Server
 			\begin{itemize}
 				\item Downloads and parses 1 year of Sony stock history.
-				\item 
+				\item Records the original CSV file size in bytes.
+				\item Records the size in bytes when stored natively in memory.
+				\item Waits to receive requests.
 			\end{itemize}
 		\end{column}
 		\begin{column}{0.5\textwidth}
-				\item For each data format the client:
+			Client
+			\begin{itemize}
+				\item Formats: CSV, MessagePack, CBOR, JSON, XML, XBF
+				\item For each data format:
 				      \begin{itemize}
 					      \item Client sends 100 requests to the server.
 					      \item Records average time to receive a response.
 					      \item Records number of bytes read.
 				      \end{itemize}
+			\end{itemize}
 		\end{column}
 	\end{columns}
 \end{frame}
 
-\section{Results}
+\section{Results and Conclusions}
 
-\begin{frame}{Average Time and Bytes Read}
-	\center
-	\begin{tabular}{|c|c|c|c|c|}
-		\hline
-		\textbf{Format} & \textbf{Avg Time (ms)} & \textbf{Bytes Read} & \textbf{Overhead (bytes)} & \textbf{Percent Overhead} \\ 
-		\hline                                                                                                                    
-		CSV             & 18.93                  & 16,411              & 1,823                     & 11.1                      \\ 
-		MessagePack     & 11.22                  & 15,565              & 977                       & 6.22                      \\ 
-		CBOR            & 16.95                  & 25,507              & 10,919                    & 42.8                      \\ 
-		JSON            & 21.91                  & 31,180              & 16,592                    & 53.2                      \\ 
-		XML             & 21.87                  & 43,699              & 29,111                    & 66.6                      \\ 
-		XBF             & 11.32                  & 14,686              & 98                        & 0.67                      \\ 
-		\hline
-	\end{tabular}
+\begin{frame}[fragile]{Data}
+	\begin{center}
+		\begin{tabular}{|c|c|c|c|c|}
+			\hline
+			\textbf{Format} & \textbf{Avg Time (ms)} & \textbf{Bytes Read} & \textbf{Overhead (bytes)} & \textbf{Percent Overhead} \\
+			\hline
+			CSV             & 18.93                  & 16,411              & 1,823                     & 11.1                      \\
+			MessagePack     & 11.22                  & 15,565              & 977                       & 6.22                      \\
+			CBOR            & 16.95                  & 25,507              & 10,919                    & 42.8                      \\
+			JSON            & 21.91                  & 31,180              & 16,592                    & 53.2                      \\
+			XML             & 21.87                  & 43,699              & 29,111                    & 66.6                      \\
+			XBF             & 11.32                  & 14,686              & 98                        & 0.67                      \\
+			\hline
+		\end{tabular}
+	\end{center}
+	Original CSV data size recorded by the server: 17,160 bytes.
+
+	Native data size recorded by the server: 14,558 bytes.
 \end{frame}
 
-\begin{frame}{Overhead}
-	\center
-	\begin{tabular}{|c|c|c|}
-		\hline
-		\textbf{Format} & \textbf{Overhead (bytes)} & \textbf{Percent Overhead} \\
-		\hline
-		CSV             & 1,823                     & 11.1                      \\
-		MessagePack     & 977                       & 6.22                      \\
-		CBOR            & 10,919                    & 42.8                      \\
-		JSON            & 16,592                    & 53.2                      \\
-		XML             & 29,111                    & 66.6                      \\
-		XBF             & 98                        & 0.67                      \\
-		\hline
-	\end{tabular}
+\begin{frame}{CSV Size Difference}
+	CSV Size Difference
+	\begin{itemize}
+		\item Original data always used 8 digits of precision.
+		\item CSV library used only writes the required digits of precision.
+		\item Example: 83.500000 becomes 83.5
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Time Performance}
+	\begin{itemize}
+		\item XBF was faster than every format except MessagePack.
+		\item Formats that operated in binary were faster, even when sending more data (CBOR).
+		\item XBF reference implementation was optimized for memory usage, more could be done for speed.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Size Performance}
+	\begin{itemize}
+		\item XBF required the least amount of bytes.
+		\item Indicates metadata deduplication worked as intended.
+		\item XBF can be even smaller with optimization techniques from MessagePack
+		      \begin{itemize}
+			      \item Coercion to smaller integer sizes when possible.
+			      \item Differently sized variable length types.
+		      \end{itemize}
+		\item Could be possible to have a "negative" overhead.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Use Cases}
+	\begin{itemize}
+		\item Internet of Things and other low bandwidth scenarios.
+		\item High volume applications.
+	\end{itemize}
 \end{frame}
 
 \backmatter[notitle]
