@@ -42,7 +42,7 @@ point numbers.
 ### Variable Length Primitives
 
 Strings should be sent as a sequence of bytes that correspond to UTF-8 code
-points. They should first send their length as an unsigned 16-bit integer (in
+points. They should first send their length as an unsigned 64-bit integer (in
 little endian format), followed by the corresponding number of bytes contained
 within the string.
 
@@ -51,7 +51,7 @@ do not have to be a valid sequence of UTF-8 code points.
 
 ### Vector
 
-Vectors should first include their length as an unsigned 16-bit integer,
+Vectors should first include their length as an unsigned 64-bit integer,
 followed by the corresponding number of elements. The type contained within a
 Vector is **not** sent to the client. That information is carried in the
 metadata.
@@ -118,9 +118,8 @@ the same size requirement). This discriminant value should be 1 greater than
 that of the discriminant value for Vectors.
 
 Following this, the name of the Struct should be sent, using the same format as
-primitive strings are sent (U16 length and then the bytes). Next, send the
-number of fields contained within the Struct as a U16, the same as all other
-lengths. Finally, the fields of the Struct should be sent, first the name of the
+primitive strings are sent (unsigned 64-bit length and then the bytes). Next, send the
+number of fields contained within the Struct as a U16. Finally, the fields of the Struct should be sent, first the name of the
 field as a String, then immediately after the metadata for the type of the
 field. This process may continue recursively with nested types of Structs or
 Vectors. These name and type pairs will be sent until there are no more fields

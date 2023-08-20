@@ -32,79 +32,31 @@ To quote their website: "[CBOR] is a data format whose design goals include the 
 
 ### XBF
 
-## Tests
+## Test Methodology
 
-### Stock Data
+The goal of this test is to measure how many bytes a particular format requires in order to transmit a given set of data, as well as how long a request for the data takes.
 
-### Random Person Data
+The dataset is one year of Sony stock history downloaded from Yahoo Finance, in CSV format. Here is the link used to download it: <https://query1.finance.yahoo.com/v7/finance/download/SONY?period1=1659398400&period2=1690934400&interval=1d&events=history&includeAdjustedClose=true>
+
+On the client side, the client measures the time it takes to open a connection to the server, send a request of what format it would like back, wait for the data to be sent back, and count the number of bytes received. This loop is performed 100 times and then the average of the times is taken.
+
+On the server side, the server downloads the stock data from Yahoo and parses it into a vector of Rust native structs using the previously mentioned CSV parser implementation. It then waits for a connection, and depending on the request type received serializes the native list into the requested format and sends it over the wire. This serialization result is not cached, and is performed every time a given format is asked for to ensure that parser performance is included in the measured round trip time.
+
+The server was a Digital Ocean droplet running Ubuntu 20.04.5 located in New York City. The client was a laptop running openSUSE Tumbleweed located in Hoboken, NJ.
 
 ## Results
 
-### Stock Data
+Original stock CSV data size: 17160
 
-### Random Person Data
+Native data size: 14558
 
-## plaintext output data August 6th, 20:31
+| Format      | Avg Time (ms) | Bytes Read |
+| ----------- | ------------- | ---------- |
+| CSV         | 18.931802     | 16411      |
+| MessagePack | 11.220957     | 15565      |
+| CBOR        | 16.957873     | 25507      |
+| JSON        | 21.912745     | 31180      |
+| XML         | 21.873043     | 43699      |
+| XBF         | 11.322245     | 14686      |
 
-original stock csv data size: 17160
-original random person data size: 13684
-
-Request Type: Stock
-Data Format: Csv
-Avg Time: 22.826262ms
-Bytes Read: Some(19090)
-
-Request Type: Stock
-Data Format: MessagePack
-Avg Time: 17.011247ms
-Bytes Read: Some(11549)
-
-Request Type: Stock
-Data Format: Cbor
-Avg Time: 21.628923ms
-Bytes Read: Some(18479)
-
-Request Type: Stock
-Data Format: Json
-Avg Time: 31.645693ms
-Bytes Read: Some(22103)
-
-Request Type: Stock
-Data Format: Xml
-Avg Time: 27.781995ms
-Bytes Read: Some(32112)
-
-Request Type: Stock
-Data Format: Xbf
-Avg Time: 16.833106ms
-Bytes Read: Some(10140)
-
-Request Type: Person
-Data Format: Csv
-Avg Time: 22.642948ms
-Bytes Read: Some(24254)
-
-Request Type: Person
-Data Format: MessagePack
-Avg Time: 17.399429ms
-Bytes Read: Some(15187)
-
-Request Type: Person
-Data Format: Cbor
-Avg Time: 22.86973ms
-Bytes Read: Some(24089)
-
-Request Type: Person
-Data Format: Json
-Avg Time: 22.468048ms
-Bytes Read: Some(30255)
-
-Request Type: Person
-Data Format: Xml
-Avg Time: 28.264575ms
-Bytes Read: Some(42309)
-
-Request Type: Person
-Data Format: Xbf
-Avg Time: 22.101917ms
-Bytes Read: Some(21751)
+There is a discrepancy between the original CSV data size and the data received by the client.

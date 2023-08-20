@@ -1,0 +1,432 @@
+\documentclass{beamer}
+\usepackage{amsfonts,amsmath,oldgerm}
+\usepackage{bytefield}
+\usepackage{listings}
+
+% pympress notes page config
+\iffalse
+	\setbeamertemplate{note page}
+	{
+		\insertslideintonotes{0.01}
+		\rule{\textwidth}{0.1pt}
+		%\color{blue} \scriptsize
+		\insertnote
+	}
+	\setbeameroption{show notes on second screen}
+\fi
+
+% adjust gigantic tabs in code blocks, not actually rust format
+\lstdefinestyle{rust}{
+	tabsize=2
+}
+\lstset{style=rust}
+
+\usetheme{sintef}
+\usefonttheme[onlymath]{serif}
+\titlebackground*{assets/background}
+
+% needed this a bunch so made a macro for myself
+\newcommand{\rot}[1]{\rotatebox{90}{#1}}
+
+\title{Xtensible Binary Format (XBF): An Efficient Self-Describing Binary Format}
+\author{\href{mailto:dkrautha@pm.me}{David Krauthamer}}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+\begin{frame}{Web Data Interchange Formats}
+	\begin{itemize}
+		\item Most common: JSON and XML
+		\item Human-Readable and Self-Describing
+		\item Alternatives: CSV, MessagePack, CBOR
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Shortcomings of Current Formats}
+	\begin{itemize}
+		\item Inefficiency of plain text.
+		\item Repeated sending of metadata.
+		\item Use of big-endian.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Plain Text Example}
+	\begin{table}
+		\caption{Sending A 32-bit Unsigned Integer}
+		\begin{center}
+			\begin{tabular}{|c|c|c|}
+				\hline
+				\textbf{Number} & \textbf{ASCII Bytes} & \textbf{Binary Bytes} \\
+				\hline
+				1               & 1                    & 4                     \\
+				9999            & 4                    & 4                     \\
+				7654321         & 7                    & 4                     \\
+				\hline
+			\end{tabular}
+		\end{center}
+	\end{table}
+\end{frame}
+
+\begin{frame}[fragile]{Repeated Metadata}
+	\begin{columns}
+		\begin{column}{0.5\textwidth}
+			\begin{lstlisting}[language=XML]
+<person>
+	<name>John Jackson</name>
+	<age>25</age>
+</person>
+\end{lstlisting}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			\begin{table}
+				\caption{XML Space Utilization}
+				\center
+				\begin{tabular}{|c|c|c|}
+					\hline
+					\textbf{} & \textbf{Bytes Used} & \textbf{Percent} \\
+					\hline
+					Metadata  & 45                  & 76\%             \\
+					Data      & 14                  & 24\%             \\
+					\hline
+					Total     & 59                  & 100              \\
+					\hline
+				\end{tabular}
+			\end{table}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Big Endian Example: 32-bit Unsigned Integer}
+	\begin{center}
+		\textbf{Number To Send: 1027} \\
+	\end{center}
+	\begin{columns}
+		\begin{column}{0.3\textwidth}
+			\begin{bytefield}{16}
+				\wordbox{1}{Sender (Little Endian)} \\
+				\bitboxes{4}{{3} {4} {0} {0}} \\
+			\end{bytefield}
+		\end{column}
+		\begin{column}{0.3\textwidth}
+			\begin{bytefield}{16}
+				\wordbox{1}{On the Wire (Big Endian)} \\
+				\bitboxes{4}{{0} {0} {4} {3}} \\
+			\end{bytefield}
+		\end{column}
+		\begin{column}{0.3\textwidth}
+			\begin{bytefield}{16}
+				\wordbox{1}{Recipient (Little Endian)} \\
+				\bitboxes{4}{{3} {4} {0} {0}} \\
+			\end{bytefield}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{Improvements For A New Format}
+	\begin{itemize}
+		\item When possible, send metadata only a single time (mainly for homogenous lists).
+		\item Allow sending metadata to be optional, such as if a client already has it.
+		\item Utilize little-endian to eliminate endian conversions on common architectures.
+		\item Prioritize a simple type system.
+	\end{itemize}
+\end{frame}
+
+\section{Format Design}
+
+\begin{frame}{Primitives and Primitive Metadata}
+	\begin{columns}
+		\begin{column}{0.5\textwidth}
+			\begin{itemize}
+				\item Boolean
+				\item U8, U16, U32, U64, U128, U256
+				      \begin{itemize}
+					      \item Equivalent to uint*\_t types in C
+				      \end{itemize}
+				\item I8, I16, I32, I64, I128, I256
+				      \begin{itemize}
+					      \item Equivalent to int*\_t types in C
+				      \end{itemize}
+				\item F32, F64
+				      \begin{itemize}
+					      \item IEEE 754 floating point numbers
+					      \item Equivalent to float and double in C
+				      \end{itemize}
+				\item Bytes  (Non-UTF-8 Bytes)
+				\item String (UTF-8 Bytes)
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.25\textwidth}
+			\center
+			\begin{tabular}{|c|c|}
+				\hline
+				\textbf{Type} & \textbf{Value} \\
+				\hline
+				Boolean       & 0              \\
+				U8            & 1              \\
+				U16           & 2              \\
+				U32           & 3              \\
+				U64           & 4              \\
+				U128          & 5              \\
+				U256          & 6              \\
+				\hline
+			\end{tabular}
+		\end{column}
+		\begin{column}{0.25\textwidth}
+			\center
+			\begin{tabular}{|c|c|}
+				\hline
+				\textbf{Type} & \textbf{Value} \\
+				\hline
+				I8            & 7              \\
+				I16           & 8              \\
+				I32           & 9              \\
+				I64           & 10             \\
+				I128          & 11             \\
+				I256          & 12             \\
+				F32           & 13             \\
+				F64           & 14             \\
+				Bytes         & 15             \\
+				String        & 16             \\
+				\hline
+			\end{tabular}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Primitive Example}
+	\begin{itemize}
+		\item 16-Bit Unsigned Integer: 1024 \\
+		      \begin{bytefield}{24}
+			      \bitbox{8}{Disc} & \bitbox{16}{1024} \\
+			      \bitbox{8}{2} & \bitboxes{8}{04} \\
+		      \end{bytefield}
+		\item String: "hello" \\
+		      \begin{bytefield}[bitheight=\widthof{"Disc"}]{28}
+			      \bitbox{2}{\rot{Disc}} & \bitbox{16}{length} & \bitboxes{2}{hello} \\
+			      \bitboxes{2}{{16} {2} {0} {0} {0} {0} {0} {0} {0} {\rot{104}} {\rot{101}} {\rot{108}} {\rot{108}} {\rot{111}}}
+		      \end{bytefield}
+
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Vectors (Homogenous Lists)}
+	Values
+	\begin{itemize}
+		\item Homogenous list of values that has a known length.
+		\item Length is sent as a part of the type, not in metadata.
+		\item Inner type Information is \emph{not} sent as a part of the value.
+	\end{itemize}
+
+	Metadata
+	\begin{itemize}
+		\item Single byte discriminant value is sent (String + 1).
+		\item Followed by internal type metadata (can continue recursively).
+		\item Length is \emph{not} sent as a part of the metadata.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Vector Example}
+	\begin{center}
+		Vector of 16-Bit Unsigned Integers: [42, 1024] \vfill \break
+
+		DV = Discriminant of a Vector
+
+		D16 = Discriminant of a 16-Bit Unsigned Integer \vfill \break
+
+		\begin{bytefield}{26}
+			\bitbox{2}{\rot{DV}} & \bitbox{2}{\rot{D16}} & \bitbox{16}{length} & \bitboxes{4}{{42} {1024}} \\
+			\bitboxes{2}{{17} {2} {2} {0} {0} {0} {0} {0} {0} {0} {42} {0} {0} {4}}
+		\end{bytefield}
+	\end{center}
+\end{frame}
+
+\begin{frame}{Structs (Aggregate Types)}
+	\begin{itemize}
+		\item	An aggregate type containing a name as well as named fields.
+		\item May not contain duplicate field names.
+		\item Fields are sent in sequence in the order they are listed in metadata.
+		\item Serialized value does \emph{not} include:
+		      \begin{itemize}
+			      \item Struct name.
+			      \item Number of fields.
+			      \item Field names.
+			      \item Field types.
+		      \end{itemize}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Struct Metadata}
+	\begin{itemize}
+		\item Single byte discriminant value is sent (Vector + 1).
+		\item Followed by Struct name.
+		\item Next, number of fields as an unsigned 16-bit integer.
+		\item Last, pairs of field names and types.
+		      \begin{itemize}
+			      \item May continue recursively with nested types of Structs or Vectors.
+		      \end{itemize}
+		\item All names are sent with the same format as primitive Strings.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Struct Metadata Example}
+	\begin{columns}
+		\begin{column}{0.65\textwidth}
+			\center
+			\begin{bytefield}{32}
+				\bitbox{2}{\rot{DS}} & \bitbox{16}{struct name length} & \bitboxes{2}{Point} & \bitbox{4}{fields} \\
+				\bitboxes{2}{{18} {5} {0} {0} {0} {0} {0} {0} {0} {80} {\rot{111}} {\rot{105}} {\rot{110}} {\rot{116}} {2} {0}} \\
+			\end{bytefield}
+			\begin{bytefield}{32}
+				\bitbox{16}{first name length} & \bitboxes{2}{first} & \bitbox{2}{\rot{DF}} \\
+				\bitboxes{2}{{5} {0} {0} {0} {0} {0} {0} {0} {\rot{102}} {\rot{105}} {\rot{114}} {\rot{115}} {\rot{116}} {7}} \\
+			\end{bytefield}
+			\begin{bytefield}{32}
+				\bitbox{16}{last name length} & \bitboxes{2}{last} & \bitbox{2}{\rot{DL}} \\
+				\bitboxes{2}{{4} {0} {0} {0} {0} {0} {0} {0} {\rot{108}} {\rot{97}} {\rot{115}} {\rot{116}} {7}}
+			\end{bytefield}
+		\end{column}
+		\begin{column}{0.35\textwidth}
+			\begin{lstlisting}
+struct Point {
+	first: i8,
+	last: i8
+}
+\end{lstlisting}
+			\hfill \break
+			DS = Struct Discriminant
+
+			DF = Field "first" discriminant
+
+			DL = Field "last" discriminant
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Struct Value Example}
+	\begin{columns}
+		\begin{column}{0.5\textwidth}
+			\center
+			\begin{bytefield}{12}
+				\bitbox{6}{first} & \bitbox{6}{last} \\
+				\bitbox{6}{42} & \bitbox{6}{251} \\
+			\end{bytefield}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			\center
+			\begin{lstlisting}
+let my_point = Point {
+	first: 42,
+	last: -5,
+};
+			\end{lstlisting}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\section{Evaluation}
+
+\begin{frame}{Encoder and Decoder Reference Implementation}
+	\begin{itemize}
+		\item Written in Rust
+		      \begin{itemize}
+			      \item Efficient code generation similar to C and C++
+			      \item Built-in tagged unions
+			      \item Strong memory safety guarantees
+		      \end{itemize}
+		\item Extensively tested
+		      \begin{itemize}
+			      \item Unit and integration tests
+			      \item 100 percent code coverage
+		      \end{itemize}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Performance Test}
+	\begin{columns}
+		\begin{column}{0.5\textwidth}
+			Multi-threaded Server
+			\begin{itemize}
+				\item Downloads and parses 1 year of Sony stock history.
+				\item Records the original CSV file size in bytes.
+				\item Records the size in bytes when stored natively in memory.
+				\item Waits to receive requests.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			Client
+			\begin{itemize}
+				\item Formats: CSV, MessagePack, CBOR, JSON, XML, XBF
+				\item For each data format:
+				      \begin{itemize}
+					      \item Client sends 100 requests to the server.
+					      \item Records average time to receive a response.
+					      \item Records number of bytes read.
+				      \end{itemize}
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\section{Results and Conclusions}
+
+\begin{frame}[fragile]{Data}
+	\begin{center}
+		\begin{tabular}{|c|c|c|c|c|}
+			\hline
+			\textbf{Format} & \textbf{Avg Time (ms)} & \textbf{Bytes Read} & \textbf{Overhead (bytes)} & \textbf{Percent Overhead} \\
+			\hline
+			CSV             & 18.93                  & 16,411              & 1,823                     & 11.1                      \\
+			MessagePack     & 11.22                  & 15,565              & 977                       & 6.22                      \\
+			CBOR            & 16.95                  & 25,507              & 10,919                    & 42.8                      \\
+			JSON            & 21.91                  & 31,180              & 16,592                    & 53.2                      \\
+			XML             & 21.87                  & 43,699              & 29,111                    & 66.6                      \\
+			XBF             & 11.32                  & 14,686              & 98                        & 0.67                      \\
+			\hline
+		\end{tabular}
+	\end{center}
+	Original CSV data size recorded by the server: 17,160 bytes.
+
+	Native data size recorded by the server: 14,558 bytes.
+\end{frame}
+
+\begin{frame}{CSV Size Difference}
+	CSV Size Difference
+	\begin{itemize}
+		\item Original data always used 8 digits of precision.
+		\item CSV library used only writes the required digits of precision.
+		\item Example: 83.500000 becomes 83.5
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Time Performance}
+	\begin{itemize}
+		\item XBF was faster than every format except MessagePack.
+		\item Formats that operated in binary were faster, even when sending more data (CBOR).
+		\item XBF reference implementation was optimized for memory usage, more could be done for speed.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Size Performance}
+	\begin{itemize}
+		\item XBF required the least amount of bytes.
+		\item Indicates metadata deduplication worked as intended.
+		\item XBF can be even smaller with optimization techniques from MessagePack
+		      \begin{itemize}
+			      \item Coercion to smaller integer sizes when possible.
+			      \item Differently sized variable length types.
+		      \end{itemize}
+		\item Could be possible to have a "negative" overhead.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Use Cases}
+	\begin{itemize}
+		\item Internet of Things and other low bandwidth scenarios.
+		\item High volume applications.
+	\end{itemize}
+\end{frame}
+
+\backmatter[notitle]
+\end{document}

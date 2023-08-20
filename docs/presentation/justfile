@@ -1,0 +1,11 @@
+build:
+  latexmk -pdf -pv ./presentation.tex
+
+build_continuous:
+  latexmk -pdf -pvc ./presentation.tex
+
+clean:
+  latexmk -c
+
+deep_clean:
+  latexmk -C
