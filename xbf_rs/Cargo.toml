@@ -1,8 +1,12 @@
 [package]
 name = "xbf_rs"
 version = "0.1.0"
+authors = ["David Krauthamer <dkrautha@pm.me>"]
 edition = "2021"
-description = "A Rust implementation of the XBF format."
+description = "The reference implementation for the XBF format."
+homepage = "https://github.com/XtensibleBinaryFormat/XBF/tree/main"
+repository = "https://github.com/XtensibleBinaryFormat/XBF/tree/main"
+readme = "../README.md"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
