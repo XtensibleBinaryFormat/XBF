@@ -102,7 +102,7 @@ jobs:
       - name: Audit
         run: cargo audit -D warnings
       - name: Coverage
-        run: cargo tarpaulin --ignore-tests --run-types AllTargets Tests Benchmarks Bins Lib --fail-under 90 --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
+        run: cargo tarpaulin --ignore-tests --all-targets --fail-under 90 --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
       - name: Format
         run: cargo fmt -- --check
 
