@@ -16,8 +16,8 @@ on:
     branches: ["main"]
     paths:
       - "xbf_rs/**"
-  schedule:
-    - cron: "00 18 * * *"
+  # schedule:
+  #   - cron: "00 18 * * *"
   workflow_dispatch:
     inputs:
       reason:
