@@ -16,8 +16,9 @@ on:
     branches: ["main"]
     paths:
       - "xbf_rs/**"
-  # schedule:
-  #   - cron: "00 18 * * *"
+  # Re-enabling, but enforcing scans monthly so as to reduce noice
+  schedule:
+     - cron: "00 18 1 * *"
   workflow_dispatch:
     inputs:
       reason:
